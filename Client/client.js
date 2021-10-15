@@ -4,10 +4,10 @@ const WebSocket = require('ws')
 // SVN repository URL
 const URL = 'https://24.210.238.51:8443/svn/ErisTesting/'
 // Path to working directory
-const PATH = 'E:/Capstone/testSVN'
+const PATH = 'D:/Github/Capstone'
 
 // SVN username and password
-const USER = 'Cam'
+const USER = 'Praxis'
 const PASSWORD = 'ErisSVN'
 
 let checkout = (url, path) => {
@@ -17,7 +17,6 @@ let checkout = (url, path) => {
     {
       username: USER,
       password: PASSWORD,
-      params: ['-m "commit works!"'],
     },
     err => {
       console.log('Checkout complete!')
@@ -31,7 +30,6 @@ let update = path => {
     {
       username: USER,
       password: PASSWORD,
-      params: ['-m "commit works!"'],
     },
     err => {
       console.log('Update complete!')
@@ -64,7 +62,7 @@ const socket = new WebSocket(URI)
 socket.addEventListener('open', function (event) {
   //socket.send('Hello Server!')
   console.log('conencted to websocket server!')
-  socket.send('Cam')
+  socket.send(USER)
 })
 
 // Listen for messages
