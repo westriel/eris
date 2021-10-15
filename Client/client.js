@@ -6,22 +6,45 @@ const URL = 'https://24.210.238.51:8443/svn/ErisTesting/'
 // Path to working directory
 const PATH = 'E:/Capstone/testSVN'
 
+// SVN username and password
+const USER = 'Cam'
+const PASSWORD = 'ErisSVN'
+
 let checkout = (url, path) => {
-  svnUltimate.commands.checkout(url, path, err => {
-    console.log('Checkout complete!')
-  })
+  svnUltimate.commands.checkout(
+    url,
+    path,
+    {
+      username: USER,
+      password: PASSWORD,
+      params: ['-m "commit works!"'],
+    },
+    err => {
+      console.log('Checkout complete!')
+    }
+  )
 }
 
 let update = path => {
-  svnUltimate.commands.update(path, err => {
-    console.log('Update complete!')
-  })
+  svnUltimate.commands.update(
+    path,
+    {
+      username: USER,
+      password: PASSWORD,
+      params: ['-m "commit works!"'],
+    },
+    err => {
+      console.log('Update complete!')
+    }
+  )
 }
 
 let commit = path => {
   svnUltimate.commands.commit(
     path,
     {
+      username: USER,
+      password: PASSWORD,
       params: ['-m "commit works!"'],
     },
     err => {
