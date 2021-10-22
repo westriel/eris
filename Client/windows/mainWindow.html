@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <title>ERIS</title>
+  </head>
+  <body class="grey darken-3">
+    <nav class="indigo accent-2">
+      <div class="nav-wrapper">
+        <a class="brand-logo left">ERIS</a>
+      </div>
+    </nav>
+    <ul class="collection grey darken-2"></ul>
+
+    <script>
+      const { ipcRenderer } = require('electron')
+
+      const ul = document.querySelector('ul')
+      // receive commands from main process
+      ipcRenderer.on('command', (event, command) => {
+        console.log(command)
+        const li = document.createElement('li')
+        li.className = 'collection-item '
+        const textItem = document.createTextNode(command)
+        li.appendChild(textItem)
+        ul.appendChild(li)
+      })
+    </script>
+  </body>
+</html>
