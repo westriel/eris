@@ -18,13 +18,15 @@ let PATH //= 'E:/Capstone/testSVN'
 let USER //= 'Cam'
 let PASSWORD //= 'ErisSVN'
 
+let socket;
+
 /////////////////////////////////////////////////////////////////
 // WEBSOCKETS
 // Create WebSocket connection.
 const URI = 'ws://24.210.238.51:6969'
 
 let startSocket = (user, password) => {
-  let socket = new WebSocket(URI)
+  socket = new WebSocket(URI)
 
   // Connection opened
   socket.addEventListener('open', function (event) {
@@ -40,11 +42,18 @@ let startSocket = (user, password) => {
     jsonData = JSON.parse(data)
 
     // Verify username
-    if (!jsonData['username_valid']) {
+    if (jsonData['connected']) {
+      console.log('valid username')
+      socket.send(PASSWORD)
+    }
+    else if (!jsonData['connected']) {
       console.log('invalid username!')
-    } else {
-      console.log('valid')
-      socket.send('password')
+    }
+    else if (jsonData['login_success']) {
+      console.log('login successful')
+    }
+    else if (!jsonData['login_success']) {
+      console.log('invalid password')
     }
     /////////////////////////////////////////////////////////////////
     // COMMANDS
@@ -153,10 +162,15 @@ let createLoginWindow = () => {
 
 ipcMain.on('login', (event, data) => {
   let { username, password } = data
+  console.log(username)
   USER = username
   PASSWORD = password
   startSocket(USER, PASSWORD)
   loginWindow.close()
+})
+ipcMain.on('settings', (event, data) => {
+  console.log(data)
+  socket.send(JSON.stringify({settings: data}))
 })
 
 let saveDir = async () => {

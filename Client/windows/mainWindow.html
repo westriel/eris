@@ -8,20 +8,25 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
     />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <title>ERIS</title>
   </head>
   <body class="grey darken-3">
     <nav class="indigo accent-2">
       <div class="nav-wrapper">
         <a class="brand-logo left">ERIS</a>
+        <ul id="nav-mobile" class="right">
+          <li><a href="settings.html"><i class="material-icons">settings</i></a></li>
+        </ul>
       </div>
     </nav>
-    <ul class="collection grey darken-2"></ul>
+    <ul id="log" class="collection grey darken-2"></ul>
+    <button id="test">Test</button>
 
     <script>
       const { ipcRenderer } = require('electron')
 
-      const ul = document.querySelector('ul')
+      const ul = document.querySelector('#log')
       // receive commands from main process
       ipcRenderer.on('command', (event, command) => {
         console.log(command)
@@ -30,6 +35,10 @@
         const textItem = document.createTextNode(command)
         li.appendChild(textItem)
         ul.appendChild(li)
+      })
+      const btn = document.querySelector('#test')
+      btn.addEventListener('click', () => {
+        ipcRenderer.send('test')
       })
     </script>
   </body>
