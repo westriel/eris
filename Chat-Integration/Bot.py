@@ -38,28 +38,27 @@ class MyClient(discord.Client):
 
     async def commit(self,message):
         start = time.time()
-        msg = " ".join(message.content.split()[2:])
-        target = message.content.split()[1]
-        print("Telling",target,"to commit")
-        await self.websocket.send(json.dumps({"command":"commit","message":msg,"target":target}))
+        msg = " ".join(message.content.split()[1:])
+        print("Telling",message.author.name,"to commit")
+        await self.websocket.send(json.dumps({"command":"commit","message":msg,"id":message.author.id}))
         print("Waiting for conf...")
         resp = json.loads(await self.websocket.recv())
         await message.channel.send(str(resp))
         
     async def update(self,message):
         start = time.time()
-        target = message.content.split()[1]
-        print("Telling",target,"to update")
-        await self.websocket.send(json.dumps({"command":"update","target":target}))
+        #target = message.content.split()[1]
+        print("Telling",message.author.name,"to update")
+        await self.websocket.send(json.dumps({"command":"update","id":message.author.id}))
         print("Waiting for conf...")
         resp = json.loads(await self.websocket.recv())
         await message.channel.send(str(resp))
 
     async def checkout(self,message):
         start = time.time()
-        target = message.content.split()[1]
-        print("Telling",target,"to update")
-        await self.websocket.send(json.dumps({"command":"checkout","target":target}))
+        #target = message.content.split()[1]
+        print("Telling",message.author.name,"to update")
+        await self.websocket.send(json.dumps({"command":"checkout","id":message.author.id}))
         print("Waiting for conf...")
         resp = json.loads(await self.websocket.recv())
         await message.channel.send(str(resp))
@@ -67,12 +66,14 @@ class MyClient(discord.Client):
     async def ping(self,message):
         start = time.time()
         print("Sending ping command")
-        await self.websocket.send(json.dumps({"command":"ping"}))
+        await self.websocket.send(json.dumps({"command":"ping","id":message.author.id}))
         print("Waiting for conf...")
         conf = await self.websocket.recv()
         print("Waiting for ping data...")
         bot_ping = time.time() - start
-        ping_data = json.loads(await self.websocket.recv())
+        data = await self.websocket.recv()
+        #print(data)
+        ping_data = json.loads(data)
         #print(ping_data)
         #print("BOT:",bot_ping)
         print(ping_data)
@@ -93,9 +94,10 @@ class MyClient(discord.Client):
         print(type(self.websocket))
         await self.websocket.send("ErisBot")
         status = json.loads(await self.websocket.recv())
-        if(not status["username_valid"]):
-            return
+        #if(not status["username_valid"]):
+        #    return
         await self.websocket.send("password")
+        status = json.loads(await self.websocket.recv())
 
 
     #CONNECTION
