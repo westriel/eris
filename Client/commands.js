@@ -29,13 +29,13 @@ let update = (path, user, password) => {
   )
 }
 
-let commit = (path, user, password) => {
+let commit = (path, user, password, msg) => {
   svnUltimate.commands.commit(
     path,
     {
       username: user,
       password: password,
-      params: ['-m "commit works!"'],
+      params: [`-m "${msg}"`],
     },
     err => {
       console.log('Commit complete!')

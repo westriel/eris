@@ -49,10 +49,20 @@ let startSocket = (user, password) => {
     } else if (jsonData['connected'] == false) {
       console.log('invalid username!')
     } else if (jsonData['login_success']) {
-      mainWindow.webContents.send('login:user', user)
-      console.log('login successful')
+      (async () => {
+        await mainWindow.loadURL(
+          url.format({
+            pathname: path.join(__dirname, 'windows', 'mainWindow.html'),
+            protocol: 'file:',
+            slashes: true,
+          })
+        )
+        await console.log('login successful')
+        await mainWindow.webContents.send('login:user', user)
+      })()
     } else if (jsonData['login_success'] == false) {
       console.log('invalid password')
+      socket.close()
     }
 
     /////////////////////////////////////////////////////////////////
@@ -70,7 +80,7 @@ let startSocket = (user, password) => {
         socket.send(
           JSON.stringify({ command_success: true, command: 'commit_response' })
         )
-        commit(PATH, user, password)
+        commit(PATH, user, password, jsonData['message'])
         mainWindow.webContents.send('command', 'SVN commit')
         break
 
@@ -97,6 +107,7 @@ let startSocket = (user, password) => {
     }
   })
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 // ELECTRON
@@ -186,6 +197,14 @@ ipcMain.on('settings', (event, data) => {
 ipcMain.on('logout', (event, data) => {
   socket.close()
   console.log('socket closed')
+  // Load html into window
+  mainWindow.loadURL(
+    url.format({
+      pathname: path.join(__dirname, 'windows', 'login.html'),
+      protocol: 'file:',
+      slashes: true,
+    })
+  )
 })
 
 ipcMain.on('changeDir', (event, data) => {

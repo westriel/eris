@@ -194,6 +194,7 @@
       })
       const loginDisplay = document.querySelector('#loginDisplay')
       ipcRenderer.on('login:user', (event, username) => {
+        console.log('test test')
         const userText = document.createTextNode(`logged in as: ${username}`)
         loginDisplay.appendChild(userText)
       })
