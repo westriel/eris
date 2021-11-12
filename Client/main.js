@@ -5,6 +5,7 @@ const WebSocket = require('ws')
 const electron = require('electron')
 const url = require('url')
 const path = require('path')
+const fs = require('fs')
 
 const { app, BrowserWindow, Menu, ipcMain, dialog } = electron
 const { checkout, update, commit } = require('./commands')
@@ -18,7 +19,7 @@ let PATH //= 'E:/Capstone/testSVN'
 let USER //= 'Cam'
 let PASSWORD //= 'ErisSVN'
 
-let socket;
+let socket
 
 /////////////////////////////////////////////////////////////////
 // WEBSOCKETS
@@ -32,7 +33,7 @@ let startSocket = (user, password) => {
   socket.addEventListener('open', function (event) {
     //socket.send('Hello Server!')
     console.log('conencted to websocket server!')
-    socket.send(USER)
+    socket.send(user)
   })
 
   // Listen for messages
@@ -44,17 +45,16 @@ let startSocket = (user, password) => {
     // Verify username
     if (jsonData['connected']) {
       console.log('valid username')
-      socket.send(PASSWORD)
-    }
-    else if (!jsonData['connected']) {
+      socket.send(password)
+    } else if (jsonData['connected'] == false) {
       console.log('invalid username!')
-    }
-    else if (jsonData['login_success']) {
+    } else if (jsonData['login_success']) {
+      mainWindow.webContents.send('login:user', user)
       console.log('login successful')
-    }
-    else if (!jsonData['login_success']) {
+    } else if (jsonData['login_success'] == false) {
       console.log('invalid password')
     }
+
     /////////////////////////////////////////////////////////////////
     // COMMANDS
     switch (jsonData['command']) {
@@ -70,7 +70,7 @@ let startSocket = (user, password) => {
         socket.send(
           JSON.stringify({ command_success: true, command: 'commit_response' })
         )
-        commit(PATH, USER, PASSWORD)
+        commit(PATH, user, password)
         mainWindow.webContents.send('command', 'SVN commit')
         break
 
@@ -79,7 +79,7 @@ let startSocket = (user, password) => {
         socket.send(
           JSON.stringify({ command_success: true, command: 'update_response' })
         )
-        update(PATH, USER, PASSWORD)
+        update(PATH, user, password)
         mainWindow.webContents.send('command', 'SVN update')
         break
 
@@ -91,7 +91,7 @@ let startSocket = (user, password) => {
             command: 'checkout_response',
           })
         )
-        checkout(URL, PATH, USER, PASSWORD)
+        checkout(URL, PATH, user, password)
         mainWindow.webContents.send('command', 'SVN checkout')
         break
     }
@@ -117,7 +117,7 @@ app.on('ready', () => {
   // Load html into window
   mainWindow.loadURL(
     url.format({
-      pathname: path.join(__dirname, 'windows', 'mainWindow.html'),
+      pathname: path.join(__dirname, 'windows', 'login.html'),
       protocol: 'file:',
       slashes: true,
     })
@@ -133,52 +133,77 @@ app.on('ready', () => {
 })
 
 // Handle create login window
-let createLoginWindow = () => {
-  // Create Window
-  loginWindow = new BrowserWindow({
-    width: 300,
-    height: 500,
-    title: 'Login',
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  })
+// let createLoginWindow = () => {
+//   // Create Window
+//   loginWindow = new BrowserWindow({
+//     width: 300,
+//     height: 500,
+//     title: 'Login',
+//     webPreferences: {
+//       nodeIntegration: true,
+//       contextIsolation: false,
+//     },
+//   })
 
-  // Load HTML file into window
-  loginWindow.loadURL(
-    url.format({
-      pathname: path.join(__dirname, 'windows', 'login.html'),
-      protocol: 'file:',
-      slashes: true,
-    })
-  )
+//   // Load HTML file into window
+//   loginWindow.loadURL(
+//     url.format({
+//       pathname: path.join(__dirname, 'windows', 'login.html'),
+//       protocol: 'file:',
+//       slashes: true,
+//     })
+//   )
 
-  // Garbage collection ahndle
-  loginWindow.on('close', () => {
-    loginWindow = null
-  })
-}
+//   // Garbage collection handle
+//   loginWindow.on('close', () => {
+//     loginWindow = null
+//   })
+// }
 
+//////////////////////////////////////////////////////
+// INTERPROCESS COMMUNICATION
 ipcMain.on('login', (event, data) => {
   let { username, password } = data
-  console.log(username)
-  USER = username
-  PASSWORD = password
-  startSocket(USER, PASSWORD)
-  loginWindow.close()
-})
-ipcMain.on('settings', (event, data) => {
-  console.log(data)
-  socket.send(JSON.stringify({settings: data}))
+  startSocket(username, password)
+  //loginWindow.close()
 })
 
-let saveDir = async () => {
+ipcMain.on('settings', (event, data) => {
+  //console.log(data)
+  let currentSettings = fs.readFileSync('./repoSettings.json')
+  let newSettings = JSON.parse(currentSettings)
+  newSettings[URL].n_commit = data.commit
+  newSettings[URL].n_merge = data.merge
+  newSettings[URL].username = data.username
+  newSettings[URL].password = data.password
+  newSettings[URL].name = data.repoName
+  newSettings[URL].path = data.path
+  fs.writeFileSync('./repoSettings.json', JSON.stringify(newSettings))
+  //console.log(newSettings)
+  //socket.send(JSON.stringify({ settings: data }))
+})
+
+ipcMain.on('logout', (event, data) => {
+  socket.close()
+  console.log('socket closed')
+})
+
+ipcMain.on('changeDir', (event, data) => {
+  saveDir(event)
+})
+
+ipcMain.on('change path', (event, data) => {
+  PATH = data
+  console.log(`path changed to ${data}`)
+})
+
+let saveDir = async e => {
   const fPath = await dialog.showOpenDialog({
     buttonLabel: 'Select Directory',
     properties: ['openDirectory'],
   })
   const { filePaths } = fPath
+  e.reply('dirSelected', filePaths[0])
   PATH = filePaths[0]
 }
 

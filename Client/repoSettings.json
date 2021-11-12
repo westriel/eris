@@ -1,0 +1,10 @@
+{
+  "https://24.210.238.51:8443/svn/ErisTesting/": {
+    "name": "Eris Testing Repo",
+    "path": "E:\\Capstone\\testSVN",
+    "username": "Cam",
+    "password": "ErisSVN",
+    "n_commit": true,
+    "n_merge": false
+  }
+}
