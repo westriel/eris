@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <title>Settings</title>
+  </head>
+  <body class="grey darken-3">
+    <nav class="indigo accent-2">
+      <div class="nav-wrapper">
+        <a class="brand-logo left" href="mainWindow.html">ERIS</a>
+        <ul id="nav-mobile" class="right">
+          <li>
+            <a href="settings.html"><i class="material-icons">settings</i></a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+      <p>Notification Settings</p>
+      <form action="">
+        <p>
+          <label for="commit">
+            <input class="filled-in" type="checkbox" id="commit" />
+            <span>Commits</span>
+          </label>
+        </p>
+        <p>
+          <label for="merge">
+            <input class="filled-in" type="checkbox" id="merge" />
+            <span>Merges</span>
+          </label>
+        </p>
+
+        <button class="btn waves-effect waves-light" type="submit">Save</button>
+      </form>
+    </div>
+    <script>
+      const URL = 'https://24.210.238.51:8443/svn/ErisTesting/'
+      const fs = require('fs')
+      const currentSettings = JSON.parse(
+        fs.readFileSync('./repoSettings.json', err => {
+          if (err) throw err
+        })
+      )
+      let commit = document.querySelector('#commit')
+      let merge = document.querySelector('#merge')
+      console.log(currentSettings[URL].n_commit)
+      currentSettings[URL].n_commit
+        ? commit.setAttribute('checked', '')
+        : commit.removeAttribute('checked')
+      currentSettings[URL].n_merge
+        ? merge.setAttribute('checked', '')
+        : merge.removeAttribute('checked')
+    </script>
+    <script>
+      const { ipcRenderer } = require('electron')
+
+      // Send form info to main process
+      let submitForm = event => {
+        event.preventDefault()
+        const commit = document.querySelector('#commit').checked
+        const merge = document.querySelector('#merge').checked
+        ipcRenderer.send('settings', { commit: commit, merge: merge })
+      }
+
+      const form = document.querySelector('form')
+      form.addEventListener('submit', submitForm)
+    </script>
+  </body>
+</html>

@@ -8,29 +8,226 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
     />
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <style type="text/css">
+      html,
+      body {
+        height: 100%;
+      }
+      .wrapper {
+        margin-left: 300px;
+        height: calc(100% - 65px);
+      }
+    </style>
     <title>ERIS</title>
   </head>
-  <body class="grey darken-3">
-    <nav class="indigo accent-2">
+  <body>
+    <nav role="navigation">
       <div class="nav-wrapper">
-        <a class="brand-logo left">ERIS</a>
+        <a href="#" class="brand-logo left">ERIS</a>
+        <ul class="right">
+          <li>
+            <a
+              id="loginDisplay"
+              class="dropdown-trigger"
+              data-target="dropdown1"
+              href="#"
+            ></a>
+            <!-- Dropdown Structure -->
+            <ul id="dropdown1" class="dropdown-content">
+              <li><a id="logout" href="#!">Logout</a></li>
+          </li>
+        </ul>
       </div>
     </nav>
-    <ul class="collection grey darken-2"></ul>
+    <div class="wrapper">
+      <div id="settings" class="container" style="width: 100%; height: 50%; overflow-y:auto; padding: 5px;">
+        <form action="">
+          <p style="margin-top: 0;">Repository Settings</p>
+          <div class="row">
+            <div class="col s12 m12 l6">
+              <label>Username</label>
+              <input type="text" id="username" required/>
+            </div>
+            <div class="col s12 m12 l6">
+              <label>Password</label>
+              <input type="password" id="password" required/>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12 m12 l6">
+              <label>Repository Name</label>
+              <input type="text" id="name" />
+            </div>
+            <div class="col s12 m12 l6">
+              <label>Working Directory</label>
+              <input disabled type="text" id="dir">
+              <a href="#" class="btn" id="changeDir">Change directory</a>
+            </div>
+          </div>
+          <p>
+            <label for="commit">
+              <input class="filled-in" type="checkbox" id="commit" />
+              <span>Commit</span>
+            </label>
+          </p>
+          <p>
+            <label for="merge">
+              <input class="filled-in" type="checkbox" id="merge" />
+              <span>Merges</span>
+            </label>
+          </p>
+          <button class="btn waves-effect waves-light" type="submit">Save</button>
+        </form>
+      </div>
+      <div
+        id="log"
+        class="collection"
+        style="width: 100%; height: 50%; margin: 0; overflow-y:auto;"
+      ></div>
+    </div>
+    <div
+      class="sidenav collection with-header"
+      style="transform: translateX(0px); top: 65px"
+    >
+      <h5 class="collection-header">Repositories</h5>
+    </div>
+    <script>
+      // Nav dropdown init
+      document.addEventListener('DOMContentLoaded', function () {
+        var elems = document.querySelectorAll('.dropdown-trigger')
+        var instances = M.Dropdown.init(elems, { coverTrigger: false })
+      })
+    </script>
+    <script>
+      // Sidenav init
+      document.addEventListener('DOMContentLoaded', function () {
+        var elems = document.querySelectorAll('.sidenav')
+        var instances = M.Sidenav.init(elems)
+      })
+    </script>
+    <script>
+      const sidenav = document.querySelector('.sidenav')
+      const fs = require('fs')
+      // Read repoSettings.json
+      const repos = JSON.parse(
+        fs.readFileSync('./repoSettings.json', err => {
+          if (err) throw err
+        })
+      )
 
+      let selectRepo = (event) => {
+        id = event.target.id
+
+        const currentSettings = JSON.parse(
+          fs.readFileSync('./repoSettings.json', err => {
+            if (err) throw err
+          })
+        )
+        ipcRenderer.send('change path', currentSettings[id].path)
+        // load json into form
+        let commit = document.querySelector('#commit')
+        let merge = document.querySelector('#merge')
+        let pword = document.querySelector('#password')
+        let uname = document.querySelector('#username')
+        let repoName = document.querySelector('#name')
+        let dirName = document.querySelector('#dir')
+        dirName.setAttribute('value', currentSettings[id].path)
+        pword.setAttribute('value', currentSettings[id].password)
+        uname.setAttribute('value', currentSettings[id].username)
+        repoName.setAttribute('value', currentSettings[id].name)
+        dirName.setAttribute('value', currentSettings[id].path)
+
+        console.log(currentSettings[id].n_commit)
+        currentSettings[id].n_commit
+          ? commit.setAttribute('checked', '')
+          : commit.removeAttribute('checked')
+        currentSettings[id].n_merge
+          ? merge.setAttribute('checked', '')
+          : merge.removeAttribute('checked')
+      }
+
+      // Fill sidenav with list of available repos
+      for (repo in repos) {
+        let name = repo
+        if (repos[repo].name != '') {
+          name = repos[repo].name
+        }
+        const repoItem = document.createElement('a')
+        repoItem.className = 'collection-item truncate repo'
+        repoItem.id = repo
+        const textItem = document.createTextNode(name)
+        if (repos[repo].username == '' || repos[repo].password == '' || repos[repo].path == '') {
+          const icon = document.createElement('i')
+          icon.className = 'material-icons'
+          icon.append('error')
+          repoItem.appendChild(icon)
+        }
+        repoItem.appendChild(textItem)
+        sidenav.appendChild(repoItem)
+        repoItem.addEventListener('click', selectRepo)
+      }
+
+    </script>
     <script>
       const { ipcRenderer } = require('electron')
+      
 
-      const ul = document.querySelector('ul')
+      const log = document.querySelector('#log')
       // receive commands from main process
       ipcRenderer.on('command', (event, command) => {
         console.log(command)
-        const li = document.createElement('li')
-        li.className = 'collection-item '
-        const textItem = document.createTextNode(command)
-        li.appendChild(textItem)
-        ul.appendChild(li)
+        const time = new Date()
+        const p = document.createElement('p')
+        p.className = 'collection-item '
+        const textItem = document.createTextNode(
+          `${time.getHours()}:${time.getMinutes()} | ${command}`
+        )
+        p.appendChild(textItem)
+        log.appendChild(p)
       })
+      const loginDisplay = document.querySelector('#loginDisplay')
+      ipcRenderer.on('login:user', (event, username) => {
+        const userText = document.createTextNode(`logged in as: ${username}`)
+        loginDisplay.appendChild(userText)
+      })
+
+      let closeSocket = () => {
+        ipcRenderer.send('logout')
+        loginDisplay.innerText = ''
+      }
+
+      // Send form info to main process
+      let submitForm = event => {
+        event.preventDefault()
+        const commit = document.querySelector('#commit').checked
+        const merge = document.querySelector('#merge').checked
+        let password = document.querySelector('#password').value
+        let username = document.querySelector('#username').value
+        let repName = document.querySelector('#name').value
+        let path = document.querySelector('#dir').value
+        ipcRenderer.send('settings', { commit: commit, merge: merge, username: username, password: password, repoName: repName, path: path })
+      }
+
+      ipcRenderer.on('dirSelected', (event, data) => {
+        document.querySelector('#dir').setAttribute('value', data)
+      })
+      let saveDir = () => {
+        ipcRenderer.send('changeDir')
+      }
+
+      const dirBtn = document.querySelector('#changeDir')
+      dirBtn.addEventListener('click', saveDir)
+      const logout = document.querySelector('#logout')
+      logout.addEventListener('click', closeSocket)
+      const form = document.querySelector('form')
+      form.addEventListener('submit', submitForm)
     </script>
   </body>
 </html>

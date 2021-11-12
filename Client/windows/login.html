@@ -14,7 +14,7 @@
     <form>
       <div>
         <label>Username</label>
-        <input type="text" id="username" />
+        <input type="text" id="username" autofocus />
       </div>
       <div>
         <label>Password</label>
@@ -37,6 +37,7 @@
         const username = document.querySelector('#username').value
         const password = document.querySelector('#password').value
         ipcRenderer.send('login', { username: username, password: password })
+        location.replace('mainWindow.html')
       }
 
       const form = document.querySelector('form')
