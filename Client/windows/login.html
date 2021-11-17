@@ -37,7 +37,7 @@
         const username = document.querySelector('#username').value
         const password = document.querySelector('#password').value
         ipcRenderer.send('login', { username: username, password: password })
-        location.replace('mainWindow.html')
+        //location.replace('mainWindow.html')
       }
 
       const form = document.querySelector('form')
