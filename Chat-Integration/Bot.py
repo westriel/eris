@@ -28,6 +28,8 @@ class MyClient(discord.Client):
         #Command List Here
         if(command == "e!ping"):
             await self.ping(message)
+        elif(command == "e!switch"):
+            await self.switch(message)
         elif(command == "e!commit"):
             await self.commit(message)
         elif(command == "e!update"):
@@ -35,6 +37,18 @@ class MyClient(discord.Client):
         elif(command == "e!checkout"):
             await self.checkout(message)
 
+    async def switch(self,message):
+        start = time.time()
+        command = message.content.split()
+        if(len(command) != 2):
+            await message.content.send("Invalid usage: `switch`")
+            return
+        print("Switching",message.author.name,"to repo",command[1])
+        await self.websocket.send(json.dumps({"command":"switch","repo":command[1],"id":message.author.id}))
+        print("Waiting for conf...")
+        resp = json.loads(await self.websocket.recv())
+        print("Got response!",resp)
+        await message.channel.send(str(resp))
 
     async def commit(self,message):
         start = time.time()

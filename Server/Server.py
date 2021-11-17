@@ -31,6 +31,7 @@ async def main_loop(websocket, path):
         print("IS Valid?",valid)
         await websocket.send(json.dumps({"login_success":valid}))
         if(not valid):
+            await websocket.close()
             return
         
         
@@ -81,7 +82,6 @@ async def bot_loop(websocket):
         data = json.loads(message)
         data["target"] = db.GetUsernameFromDiscordID(data["id"])
         if(data["command"] == "ping"):
-            print("TASK_BOT:",asyncio.current_task())
             await websocket.send("True")
             
             PINGS = {}
@@ -94,7 +94,15 @@ async def bot_loop(websocket):
             pings = {}
 
         elif(data["command"] == "switch"):
-            pass
+            print("Recieved switch command")
+            if(db.CheckIfRepoExists(data["repo"])):
+                if(db.CheckIfUserHasRepoAccess(data["target"],data["repo"])):
+                    status = db.SetUserCurrentRepo(data["target"],data["repo"])
+                    await websocket.send(json.dumps({"success":status}))
+                else:
+                    await websocket.send(json.dumps({"success":False,"reason":"You do not have access to this repo"}))
+            else:
+                await websocket.send(json.dumps({"success":False,"reason":"That repo does not exist within our system"}))
 
         elif(data["command"] == "commit"):
             print("Recieved commit command")
@@ -106,6 +114,11 @@ async def bot_loop(websocket):
             if(client == None):
                 print("Nothing")
                 return #handle this later
+            repo = db.GetUserCurrentRepo(data["target"])
+            if(repo == None):
+                await websocket.send(json.dumps({"success":False,"reason":"You do not have a repo selected"}))
+                continue
+            data["repo"] = repo
             await client.send(json.dumps(data))
         elif(data["command"] == "update"):
             print("Received update comamnd")
@@ -117,6 +130,11 @@ async def bot_loop(websocket):
             if(client == None):
                 print("Nothing")
                 return #handle this later
+            repo = db.GetUserCurrentRepo(data["target"])
+            if(repo == None):
+                await websocket.send(json.dumps({"success":False,"reason":"You do not have a repo selected"}))
+                continue
+            data["repo"] = repo
             await client.send(json.dumps(data))
         elif(data["command"] == "checkout"):
             print("Received checkout comamnd")
@@ -128,6 +146,11 @@ async def bot_loop(websocket):
             if(client == None):
                 print("Nothing")
                 return #handle this later
+            repo = db.GetUserCurrentRepo(data["target"])
+            if(repo == None):
+                await websocket.send(json.dumps({"success":False,"reason":"You do not have a repo selected"}))
+                continue
+            data["repo"] = repo
             await client.send(json.dumps(data))
 
 
