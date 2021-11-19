@@ -20,17 +20,28 @@ class Database:
            
 
 
-    def CheckUsernameAndPassword(self,username,password):
+    def CheckUsername(self,username):
         try:
             cursor = self.conn.cursor()
-            QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
+            #QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
+            QUERY = "SELECT * FROM user WHERE user_name = \"{username}\"".format(username=username)
             data = cursor.execute(QUERY)
-            for row in cursor:
-                print(row)
-            print("LEN",data)
+##            for row in cursor:
+##                print(row)
+##            print("LEN",data)
             return bool(data)
         except pymysql.Error as e:
-            print("CheckUsernameAndPassword Error %d: %s" % (e.args[0], e.args[1]))
+            print("CheckUsername Error %d: %s" % (e.args[0], e.args[1]))
+
+    def CreateUser(self,username):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "INSERT INTO user (user_name, is_admin, current_repo) VALUES (\"{username}\", 0, null)".format(username=username)
+            data = cursor.execute(QUERY)
+            self.conn.commit()
+            return bool(data)
+        except pymysql.Error as e:
+            print("CreateUser Error %d: %s" % (e.args[0], e.args[1]))
 
     def GetUsernameFromDiscordID(self,dis_id):
         try:
