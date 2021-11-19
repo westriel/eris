@@ -20,17 +20,28 @@ class Database:
            
 
 
-    def CheckUsernameAndPassword(self,username,password):
+    def CheckUsername(self,username):
         try:
             cursor = self.conn.cursor()
-            QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
+            #QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
+            QUERY = "SELECT * FROM user WHERE user_name = \"{username}\"".format(username=username)
             data = cursor.execute(QUERY)
-            for row in cursor:
-                print(row)
-            print("LEN",data)
+##            for row in cursor:
+##                print(row)
+##            print("LEN",data)
             return bool(data)
         except pymysql.Error as e:
-            print("CheckUsernameAndPassword Error %d: %s" % (e.args[0], e.args[1]))
+            print("CheckUsername Error %d: %s" % (e.args[0], e.args[1]))
+
+    def CreateUser(self,username):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "INSERT INTO user (user_name, is_admin, current_repo) VALUES (\"{username}\", 0, null)".format(username=username)
+            data = cursor.execute(QUERY)
+            self.conn.commit()
+            return bool(data)
+        except pymysql.Error as e:
+            print("CreateUser Error %d: %s" % (e.args[0], e.args[1]))
 
     def GetUsernameFromDiscordID(self,dis_id):
         try:
@@ -51,9 +62,47 @@ class Database:
             cursor = self.conn.cursor()
             QUERY = "UPDATE notification_settings SET commit_update = {commit}, merge_update = {merge} WHERE user_name = \"{username}\" and address = \"{repo}\"".format(commit = settings["commit"], merge = settings["merge"], username=username, repo = repo)
             status = cursor.execute(QUERY)
+            self.conn.commit()
             return status
 
         except pymysql.Error as e:
             print("UpdateUserRepoSettings Error %d: %s" % (e.args[0], e.args[1]))
-            return 0
+
+    def CheckIfRepoExists(self,repo):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT address FROM svn_repo WHERE address = \"{address}\"".format(address=repo)
+            status = cursor.execute(QUERY)
+            return bool(len(cursor.fetchall()))
+        except pymysql.Error as e:
+            print("CheckIfRepoExists Error %d: %s" % (e.args[0], e.args[1]))
+
+    def CheckIfUserHasRepoAccess(self,username,repo):
+        print(username,repo)
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT * FROM repo_access WHERE user_name = \"{username}\" AND address = \"{repo}\"".format(username=username,repo=repo)
+            status = cursor.execute(QUERY)
+            return bool(len(cursor.fetchall()))
+        except pymysql.Error as e:
+            print("CheckIfUserHasRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
+
+    def SetUserCurrentRepo(self,username,repo):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "UPDATE user SET current_repo = \"{repo}\" WHERE user_name = \"{username}\"".format(repo=repo,username=username)
+            status = cursor.execute(QUERY)
+            self.conn.commit()
+            return bool(status)
+        except pymysql.Error as e:
+            print("SetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
+
+    def GetUserCurrentRepo(self,username):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT current_repo FROM user WHERE user_name = \"{username}\"".format(username=username)
+            status = cursor.execute(QUERY)
+            return cursor.fetchall()[0][0]
+        except pymysql.Error as e:
+            print("GetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
             
