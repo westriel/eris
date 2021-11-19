@@ -22,6 +22,7 @@ let update = (path, user, password) => {
     {
       username: user,
       password: password,
+      params: ['--accept p'],
     },
     err => {
       console.log('Update complete!')

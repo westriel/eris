@@ -9,15 +9,14 @@ const fs = require('fs')
 
 const { app, BrowserWindow, Menu, ipcMain, dialog } = electron
 const { checkout, update, commit } = require('./commands')
+const { login } = require('./Oauth')
 
 // SVN repository URL
-const URL = 'https://24.210.238.51:8443/svn/ErisTesting/'
+let URL // = 'https://24.210.238.51:8443/svn/ErisTesting/'
 // Path to working directory
-let PATH //= 'E:/Capstone/testSVN'
-
-// SVN username and password
-let USER //= 'Cam'
-let PASSWORD //= 'ErisSVN'
+let PATH
+let PASSWORD
+let USERNAME
 
 let socket
 
@@ -26,7 +25,7 @@ let socket
 // Create WebSocket connection.
 const URI = 'ws://24.210.238.51:6969'
 
-let startSocket = (user, password) => {
+let startSocket = user => {
   socket = new WebSocket(URI)
 
   // Connection opened
@@ -43,13 +42,15 @@ let startSocket = (user, password) => {
     jsonData = JSON.parse(data)
 
     // Verify username
-    if (jsonData['connected']) {
-      console.log('valid username')
-      socket.send(password)
-    } else if (jsonData['connected'] == false) {
-      console.log('invalid username!')
-    } else if (jsonData['login_success']) {
-      (async () => {
+    // if (jsonData['connected']) {
+    //   console.log('valid username')
+    //   socket.send(password)
+    // } else if (jsonData['connected'] == false) {
+    //   console.log('invalid username!')
+    // } else
+    if (jsonData['login_success']) {
+      // Makes sure that the window is loaded before the render is sent the username
+      ;(async () => {
         await mainWindow.loadURL(
           url.format({
             pathname: path.join(__dirname, 'windows', 'mainWindow.html'),
@@ -63,6 +64,7 @@ let startSocket = (user, password) => {
     } else if (jsonData['login_success'] == false) {
       console.log('invalid password')
       socket.close()
+      console.log('socket closed')
     }
 
     /////////////////////////////////////////////////////////////////
@@ -80,7 +82,7 @@ let startSocket = (user, password) => {
         socket.send(
           JSON.stringify({ command_success: true, command: 'commit_response' })
         )
-        commit(PATH, user, password, jsonData['message'])
+        commit(PATH, USERNAME, PASSWORD, jsonData['message'])
         mainWindow.webContents.send('command', 'SVN commit')
         break
 
@@ -89,7 +91,7 @@ let startSocket = (user, password) => {
         socket.send(
           JSON.stringify({ command_success: true, command: 'update_response' })
         )
-        update(PATH, user, password)
+        update(PATH, USERNAME, PASSWORD)
         mainWindow.webContents.send('command', 'SVN update')
         break
 
@@ -101,13 +103,12 @@ let startSocket = (user, password) => {
             command: 'checkout_response',
           })
         )
-        checkout(URL, PATH, user, password)
+        checkout(URL, PATH, USERNAME, PASSWORD)
         mainWindow.webContents.send('command', 'SVN checkout')
         break
     }
   })
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 // ELECTRON
@@ -143,39 +144,12 @@ app.on('ready', () => {
   Menu.setApplicationMenu(mainMenu)
 })
 
-// Handle create login window
-// let createLoginWindow = () => {
-//   // Create Window
-//   loginWindow = new BrowserWindow({
-//     width: 300,
-//     height: 500,
-//     title: 'Login',
-//     webPreferences: {
-//       nodeIntegration: true,
-//       contextIsolation: false,
-//     },
-//   })
-
-//   // Load HTML file into window
-//   loginWindow.loadURL(
-//     url.format({
-//       pathname: path.join(__dirname, 'windows', 'login.html'),
-//       protocol: 'file:',
-//       slashes: true,
-//     })
-//   )
-
-//   // Garbage collection handle
-//   loginWindow.on('close', () => {
-//     loginWindow = null
-//   })
-// }
-
 //////////////////////////////////////////////////////
 // INTERPROCESS COMMUNICATION
 ipcMain.on('login', (event, data) => {
-  let { username, password } = data
-  startSocket(username, password)
+  ;(async () => {
+    await login(startSocket)
+  })()
   //loginWindow.close()
 })
 
@@ -191,7 +165,8 @@ ipcMain.on('settings', (event, data) => {
   newSettings[URL].path = data.path
   fs.writeFileSync('./repoSettings.json', JSON.stringify(newSettings))
   //console.log(newSettings)
-  //socket.send(JSON.stringify({ settings: data }))
+  mainWindow.webContents.send('settings_saved')
+  socket.send(JSON.stringify({ settings: data }))
 })
 
 ipcMain.on('logout', (event, data) => {
@@ -212,8 +187,11 @@ ipcMain.on('changeDir', (event, data) => {
 })
 
 ipcMain.on('change path', (event, data) => {
-  PATH = data
-  console.log(`path changed to ${data}`)
+  changeRepo(data)
+  console.log(`path changed to ${PATH}`)
+  console.log(`repo changed to ${URL}`)
+  console.log(`username changed to ${USERNAME}`)
+  console.log(`password changed to ${PASSWORD}`)
 })
 
 let saveDir = async e => {
@@ -227,29 +205,7 @@ let saveDir = async e => {
 }
 
 // Main menu template
-const mainMenuTemplate = [
-  {
-    label: 'File',
-    submenu: [
-      {
-        label: 'Login',
-        click() {
-          createLoginWindow()
-        },
-      },
-      {
-        label: 'Select working directory',
-        click() {
-          saveDir()
-        },
-      },
-      {
-        label: 'Quit',
-        accelerator: process.platform == 'darwin' ? 'Command+Q' : 'Ctrl+Q',
-      },
-    ],
-  },
-]
+const mainMenuTemplate = []
 
 // Add dev tools item if not in production
 if (process.env.NODE_ENV !== 'production') {
@@ -269,3 +225,20 @@ if (process.env.NODE_ENV !== 'production') {
     ],
   })
 }
+
+let changeRepo = repo => {
+  let repos = fs.readFileSync('./repoSettings.json')
+  repos = JSON.parse(repos)
+  if (repos[repo].path == '') {
+    PATH = ''
+  } else {
+    PATH = repos[repo].path
+  }
+
+  PASSWORD = repos[repo].password
+  USERNAME = repos[repo].username
+
+  URL = repo
+}
+
+// {"command": "checkout", "id": 181459954144772096, "target": "Cam", "repo": "https://24.210.238.51:8443/svn/ErisTesting/"}
