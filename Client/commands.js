@@ -44,4 +44,35 @@ let commit = (path, user, password, msg) => {
   )
 }
 
-module.exports = { checkout, update, commit }
+let add = (files, path, user, password) => {
+  files.forEach((file, index) => {
+    files[index] = `${path}\\${file}`
+  })
+  svnUltimate.commands.add(
+    files,
+    {
+      username: user,
+      password: password,
+    },
+    err => {
+      console.log('Add complete!')
+    }
+  )
+}
+
+let del = (files, path, user, password) => {
+  files.forEach((file, index) => {
+    files[index] = `${path}\\${file}`
+  })
+  svnUltimate.commands.del(
+    files,
+    {
+      username: user,
+      password: password,
+    },
+    err => {
+      console.log('Delete complete!')
+    }
+  )
+}
+module.exports = { checkout, update, commit, add, del }

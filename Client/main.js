@@ -8,7 +8,7 @@ const path = require('path')
 const fs = require('fs')
 
 const { app, BrowserWindow, Menu, ipcMain, dialog } = electron
-const { checkout, update, commit } = require('./commands')
+const { checkout, update, commit, add, del } = require('./commands')
 const { login } = require('./Oauth')
 
 // SVN repository URL
@@ -32,7 +32,7 @@ let startSocket = user => {
   socket.addEventListener('open', function (event) {
     //socket.send('Hello Server!')
     console.log('conencted to websocket server!')
-    socket.send(user)
+    socket.send(user.id)
   })
 
   // Listen for messages
@@ -59,7 +59,7 @@ let startSocket = user => {
           })
         )
         await console.log('login successful')
-        await mainWindow.webContents.send('login:user', user)
+        await mainWindow.webContents.send('login:user', user.username)
       })()
     } else if (jsonData['login_success'] == false) {
       console.log('invalid password')
@@ -78,6 +78,7 @@ let startSocket = user => {
         break
 
       case 'commit':
+        changeRepo(jsonData['repo'])
         console.log('commited')
         socket.send(
           JSON.stringify({ command_success: true, command: 'commit_response' })
@@ -87,6 +88,7 @@ let startSocket = user => {
         break
 
       case 'update':
+        changeRepo(jsonData['repo'])
         console.log('updated')
         socket.send(
           JSON.stringify({ command_success: true, command: 'update_response' })
@@ -96,6 +98,7 @@ let startSocket = user => {
         break
 
       case 'checkout':
+        changeRepo(jsonData['repo'])
         console.log('checked out')
         socket.send(
           JSON.stringify({
@@ -106,6 +109,32 @@ let startSocket = user => {
         checkout(URL, PATH, USERNAME, PASSWORD)
         mainWindow.webContents.send('command', 'SVN checkout')
         break
+
+      case 'add':
+        changeRepo(jsonData['repo'])
+        console.log('files added')
+        socket.send(
+          JSON.stringify({
+            command_success: true,
+            command: 'add_response',
+          })
+        )
+        add(jsonData['files'], PATH, USERNAME, PASSWORD)
+        mainWindow.webContents.send('command', 'SVN add')
+        break
+
+      case 'remove':
+        changeRepo(jsonData['repo'])
+        console.log('files added')
+        socket.send(
+          JSON.stringify({
+            command_success: true,
+            command: 'remove_response',
+          })
+        )
+        del(jsonData['files'], PATH, USERNAME, PASSWORD)
+        mainWindow.webContents.send('command', 'SVN add')
+        break
     }
   })
 }
@@ -114,7 +143,7 @@ let startSocket = user => {
 // ELECTRON
 // Declare windows
 let mainWindow
-let loginWindow
+let repoError
 
 // Listen for app to be ready
 app.on('ready', () => {
@@ -155,10 +184,10 @@ ipcMain.on('login', (event, data) => {
 
 ipcMain.on('settings', (event, data) => {
   //console.log(data)
-  let currentSettings = fs.readFileSync('./repoSettings.json')
+  let currentSettings = readSettings()
   let newSettings = JSON.parse(currentSettings)
   newSettings[URL].n_commit = data.commit
-  newSettings[URL].n_merge = data.merge
+  newSettings[URL].n_update = data.update
   newSettings[URL].username = data.username
   newSettings[URL].password = data.password
   newSettings[URL].name = data.repoName
@@ -201,7 +230,7 @@ let saveDir = async e => {
   })
   const { filePaths } = fPath
   e.reply('dirSelected', filePaths[0])
-  PATH = filePaths[0]
+  return filePaths[0]
 }
 
 // Main menu template
@@ -227,8 +256,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 let changeRepo = repo => {
-  let repos = fs.readFileSync('./repoSettings.json')
-  repos = JSON.parse(repos)
+  let repos = readSettings()
   if (repos[repo].path == '') {
     PATH = ''
   } else {
@@ -241,4 +269,42 @@ let changeRepo = repo => {
   URL = repo
 }
 
+let readSettings = () => {
+  if (fs.existsSync('./repoSettings.json')) {
+    let repos = fs.readFileSync('./repoSettings.json')
+    repos = JSON.parse(repos)
+    return repos
+  } else {
+    // Creating a blank json if it doesnt exist
+    fs.writeFileSync('./repoSettings.json', {})
+    return {}
+  }
+}
+
 // {"command": "checkout", "id": 181459954144772096, "target": "Cam", "repo": "https://24.210.238.51:8443/svn/ErisTesting/"}
+let chekcRepoInfo = repo => {
+  let repos = readSettings()
+  if (repos[repo].username == '') {
+  }
+
+  repoError = new BrowserWindow({
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  })
+
+  // Load html into window
+  repoError.loadURL(
+    url.format({
+      pathname: path.join(__dirname, 'windows', 'repoLogin.html'),
+      protocol: 'file:',
+      slashes: true,
+    })
+  )
+
+  // Quit app when closed
+  repoError.on('closed', () => {
+    app.quit()
+  })
+}

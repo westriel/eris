@@ -8,8 +8,8 @@ const { fetch } = e_fetch
 
 const CLIENT_ID = '888218725810049055'
 const CLIENT_SECRET = 'Qm_0_CJrzddppz7TiOOn5Vy0iLNXmY0w'
-
-let login = socketCallback => {
+let login
+let loginW = socketCallback => {
   login = new BrowserWindow({
     webPreferences: {
       nodeIntegration: false,
@@ -60,8 +60,8 @@ let login = socketCallback => {
         },
       })
       const user = await getUser.json()
-      console.log(user.id)
-      socketCallback(user.id)
+      console.log(user)
+      socketCallback(user)
     })()
   })
 
