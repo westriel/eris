@@ -69,6 +69,7 @@ let startSocket = user => {
 
     /////////////////////////////////////////////////////////////////
     // COMMANDS
+    let repoInfo
     switch (jsonData['command']) {
       case 'ping':
         console.log('pinged!')
@@ -79,62 +80,133 @@ let startSocket = user => {
 
       case 'commit':
         changeRepo(jsonData['repo'])
-        console.log('commited')
-        socket.send(
-          JSON.stringify({ command_success: true, command: 'commit_response' })
-        )
-        commit(PATH, USERNAME, PASSWORD, jsonData['message'])
-        mainWindow.webContents.send('command', 'SVN commit')
-        break
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('commited')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'commit_response',
+            })
+          )
+          commit(PATH, USERNAME, PASSWORD, jsonData['message'])
+          mainWindow.webContents.send('command', 'SVN commit')
+          break
+        }
 
       case 'update':
         changeRepo(jsonData['repo'])
-        console.log('updated')
-        socket.send(
-          JSON.stringify({ command_success: true, command: 'update_response' })
-        )
-        update(PATH, USERNAME, PASSWORD)
-        mainWindow.webContents.send('command', 'SVN update')
-        break
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('updated')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'update_response',
+            })
+          )
+          update(PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN update')
+          break
+        }
 
       case 'checkout':
         changeRepo(jsonData['repo'])
-        console.log('checked out')
-        socket.send(
-          JSON.stringify({
-            command_success: true,
-            command: 'checkout_response',
-          })
-        )
-        checkout(URL, PATH, USERNAME, PASSWORD)
-        mainWindow.webContents.send('command', 'SVN checkout')
-        break
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('checked out')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'checkout_response',
+            })
+          )
+          checkout(URL, PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN checkout')
+          break
+        }
 
       case 'add':
         changeRepo(jsonData['repo'])
-        console.log('files added')
-        socket.send(
-          JSON.stringify({
-            command_success: true,
-            command: 'add_response',
-          })
-        )
-        add(jsonData['files'], PATH, USERNAME, PASSWORD)
-        mainWindow.webContents.send('command', 'SVN add')
-        break
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('files added')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'add_response',
+            })
+          )
+          add(jsonData['files'], PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN add')
+          break
+        }
 
       case 'remove':
         changeRepo(jsonData['repo'])
-        console.log('files added')
-        socket.send(
-          JSON.stringify({
-            command_success: true,
-            command: 'remove_response',
-          })
-        )
-        del(jsonData['files'], PATH, USERNAME, PASSWORD)
-        mainWindow.webContents.send('command', 'SVN add')
-        break
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('files added')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'remove_response',
+            })
+          )
+          del(jsonData['files'], PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN add')
+          break
+        }
     }
   })
 }
@@ -143,7 +215,6 @@ let startSocket = user => {
 // ELECTRON
 // Declare windows
 let mainWindow
-let repoError
 
 // Listen for app to be ready
 app.on('ready', () => {
@@ -185,7 +256,8 @@ ipcMain.on('login', (event, data) => {
 ipcMain.on('settings', (event, data) => {
   //console.log(data)
   let currentSettings = readSettings()
-  let newSettings = JSON.parse(currentSettings)
+  let newSettings = currentSettings
+  newSettings[URL].autoUpdate = data.autoUpdate
   newSettings[URL].n_commit = data.commit
   newSettings[URL].n_update = data.update
   newSettings[URL].username = data.username
@@ -195,7 +267,11 @@ ipcMain.on('settings', (event, data) => {
   fs.writeFileSync('./repoSettings.json', JSON.stringify(newSettings))
   //console.log(newSettings)
   mainWindow.webContents.send('settings_saved')
-  socket.send(JSON.stringify({ settings: data }))
+  socket.send(
+    JSON.stringify({ command: 'update_settings', settings: data, repo: URL })
+  )
+  console.log('sent')
+  refresh()
 })
 
 ipcMain.on('logout', (event, data) => {
@@ -230,7 +306,6 @@ let saveDir = async e => {
   })
   const { filePaths } = fPath
   e.reply('dirSelected', filePaths[0])
-  return filePaths[0]
 }
 
 // Main menu template
@@ -282,29 +357,49 @@ let readSettings = () => {
 }
 
 // {"command": "checkout", "id": 181459954144772096, "target": "Cam", "repo": "https://24.210.238.51:8443/svn/ErisTesting/"}
-let chekcRepoInfo = repo => {
+let checkRepoInfo = repo => {
   let repos = readSettings()
+  let errorFlag = false
+  let errors = []
   if (repos[repo].username == '') {
+    console.log('please fill in username')
+    errorFlag = true
+    errors.push('username')
   }
+  if (repos[repo].password == '') {
+    console.log('please fill in password')
+    errorFlag = true
+    errors.push('password')
+  }
+  if (repos[repo].path == '') {
+    console.log('please fill in working directory')
+    errorFlag = true
+    errors.push('path')
+  }
+  return { missingInfo: errorFlag, fields: errors }
 
-  repoError = new BrowserWindow({
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  })
+  // repoError = new BrowserWindow({
+  //   webPreferences: {
+  //     nodeIntegration: true,
+  //     contextIsolation: false,
+  //   },
+  // })
 
-  // Load html into window
-  repoError.loadURL(
-    url.format({
-      pathname: path.join(__dirname, 'windows', 'repoLogin.html'),
-      protocol: 'file:',
-      slashes: true,
-    })
-  )
+  // // Load html into window
+  // repoError.loadURL(
+  //   url.format({
+  //     pathname: path.join(__dirname, 'windows', 'repoLogin.html'),
+  //     protocol: 'file:',
+  //     slashes: true,
+  //   })
+  // )
 
-  // Quit app when closed
-  repoError.on('closed', () => {
-    app.quit()
-  })
+  // // Quit app when closed
+  // repoError.on('closed', () => {
+  //   app.quit()
+  // })
+}
+
+let refresh = () => {
+  mainWindow.webContents.send('refresh')
 }

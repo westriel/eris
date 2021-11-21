@@ -72,15 +72,21 @@
             </div>
           </div>
           <p>
-            <label for="commit">
-              <input class="filled-in" type="checkbox" id="commit" />
-              <span>Commit</span>
+            <label for="autoupdate">
+              <input class="filled-in" type="checkbox" id="autoupdate" />
+              <span>Auto Update</span>
             </label>
           </p>
           <p>
             <label for="update">
               <input class="filled-in" type="checkbox" id="update" />
-              <span>Auto Updates</span>
+              <span>Auto Update Notifications</span>
+            </label>
+          </p>
+          <p>
+            <label for="commit">
+              <input class="filled-in" type="checkbox" id="commit" />
+              <span>Commit Notifications</span>
             </label>
           </p>
           <button class="btn waves-effect waves-light" type="submit">Save</button>
@@ -96,7 +102,7 @@
       class="sidenav collection with-header"
       style="transform: translateX(0px); top: 65px"
     >
-      <h5 class="collection-header">Repositories</h5>
+      <h5 class="collection-header">Repositories <a href="#" id="refresh" class="grey-text text-darken-4"><i class="material-icons right">refresh</i></a></h5>
     </div>
     <script>
       // Nav dropdown init

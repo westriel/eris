@@ -8,8 +8,7 @@ const { fetch } = e_fetch
 
 const CLIENT_ID = '888218725810049055'
 const CLIENT_SECRET = 'Qm_0_CJrzddppz7TiOOn5Vy0iLNXmY0w'
-let login
-let loginW = socketCallback => {
+let login = socketCallback => {
   login = new BrowserWindow({
     webPreferences: {
       nodeIntegration: false,
@@ -25,7 +24,7 @@ let loginW = socketCallback => {
     ;(async () => {
       login.loadURL(
         url.format({
-          pathname: path.join(__dirname, 'loading.html'),
+          pathname: path.join(__dirname, 'windows', 'loading.html'),
           protocol: 'file:',
           slashes: true,
         })

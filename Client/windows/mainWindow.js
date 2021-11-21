@@ -7,18 +7,24 @@ const repos = JSON.parse(
   })
 )
 
+// Triggers whe the user clicks on a repo
 let selectRepo = event => {
   id = event.target.id
 
+  // get settings from settings json
   const currentSettings = JSON.parse(
     fs.readFileSync('./repoSettings.json', err => {
       if (err) throw err
     })
   )
+  // changes the current working directory to the repo that was clicked
   ipcRenderer.send('change path', id)
+
+  document.querySelector('form').reset()
   // load json into form
   let commit = document.querySelector('#commit')
   let update = document.querySelector('#update')
+  let autoUpdate = document.querySelector('#autoupdate')
   let pword = document.querySelector('#password')
   let uname = document.querySelector('#username')
   let repoName = document.querySelector('#name')
@@ -29,13 +35,17 @@ let selectRepo = event => {
   repoName.setAttribute('value', currentSettings[id].name)
   dirName.setAttribute('value', currentSettings[id].path)
 
-  console.log(currentSettings[id].n_commit)
+  currentSettings[id].autoUpdate
+    ? autoUpdate.setAttribute('checked', '')
+    : autoUpdate.removeAttribute('checked')
   currentSettings[id].n_commit
     ? commit.setAttribute('checked', '')
     : commit.removeAttribute('checked')
   currentSettings[id].n_update
     ? update.setAttribute('checked', '')
     : update.removeAttribute('checked')
+
+  //document.querySelector(`#${id}`).classList.add('active')
 }
 
 // Fill sidenav with list of available repos
@@ -95,15 +105,18 @@ let closeSocket = () => {
 // Send form info to main process
 let submitForm = event => {
   event.preventDefault()
+  console.log('yeet')
+  const autoUpdate = document.querySelector('#autoupdate').checked
   const commit = document.querySelector('#commit').checked
-  const merge = document.querySelector('#merge').checked
+  const update = document.querySelector('#update').checked
   let password = document.querySelector('#password').value
   let username = document.querySelector('#username').value
   let repName = document.querySelector('#name').value
   let path = document.querySelector('#dir').value
   ipcRenderer.send('settings', {
+    autoUpdate: autoUpdate,
     commit: commit,
-    merge: merge,
+    update: update,
     username: username,
     password: password,
     repoName: repName,
@@ -118,9 +131,58 @@ let saveDir = () => {
   ipcRenderer.send('changeDir')
 }
 
+// updates repositories list in sidenav
+let refresh = () => {
+  console.log('clicked!')
+  let updatedRepos = JSON.parse(fs.readFileSync('./repoSettings.json'))
+  // repo list parent
+  let repoList = document.querySelector('.sidenav')
+
+  while (repoList.lastChild) {
+    if (repoList.lastChild.className == 'collection-header') {
+      console.log('cleared')
+      break
+    } else {
+      repoList.removeChild(repoList.lastChild)
+    }
+  }
+  console.log(updatedRepos)
+
+  for (repo in updatedRepos) {
+    let name = repo
+    if (updatedRepos[repo].name != '') {
+      name = updatedRepos[repo].name
+    }
+    const repoItem = document.createElement('a')
+    repoItem.className = 'collection-item truncate repo'
+    repoItem.id = repo
+    const textItem = document.createTextNode(name)
+    if (
+      updatedRepos[repo].username == '' ||
+      updatedRepos[repo].password == '' ||
+      updatedRepos[repo].path == ''
+    ) {
+      const icon = document.createElement('i')
+      icon.className = 'material-icons'
+      icon.append('error')
+      repoItem.appendChild(icon)
+    }
+    repoItem.appendChild(textItem)
+    sidenav.appendChild(repoItem)
+    repoItem.addEventListener('click', selectRepo)
+  }
+}
+
+ipcRenderer.on('refresh', (event, data) => {
+  refresh()
+})
+
 const dirBtn = document.querySelector('#changeDir')
 dirBtn.addEventListener('click', saveDir)
 const logout = document.querySelector('#logout')
 logout.addEventListener('click', closeSocket)
 const form = document.querySelector('form')
 form.addEventListener('submit', submitForm)
+const refreshButton = document.querySelector('#refresh')
+refreshButton.addEventListener('click', refresh)
+// // Fill sidenav with list of available repos
