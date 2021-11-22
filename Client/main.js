@@ -207,6 +207,55 @@ let startSocket = user => {
           mainWindow.webContents.send('command', 'SVN add')
           break
         }
+      case 'send_repo_list':
+        let { repos } = jsonData
+        let currentSettings = readSettings()
+        for (repo in repos) {
+          if (repo in currentSettings) {
+            currentSettings[repo].n_commit = repos[repo].commit
+            currentSettings[repo].n_update = repos[repo].update
+            currentSettings[repo].autoUpdate = repos[repo].autoUpdate
+          } else {
+            currentSettings[repo] = {
+              name: '',
+              path: '',
+              username: 'Cam',
+              password: 'ErisSVN',
+              autoUpdate: repos[repo].autoUpdate,
+              n_commit: repos[repo].commit,
+              n_update: repos[repo].update,
+            }
+          }
+        }
+        fs.writeFileSync('./repoSettings.json', JSON.stringify(currentSettings))
+        refresh()
+        break
+
+      case 'auto_update':
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'auto_update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('updated')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'auto_update_response',
+            })
+          )
+          update(PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN update')
+          break
+        }
     }
   })
 }
@@ -376,28 +425,13 @@ let checkRepoInfo = repo => {
     errorFlag = true
     errors.push('path')
   }
+  if (errorFlag) {
+    let errorString = ''
+    dialog.showMessageBox(mainWindow, {
+      message: `Please fill in missing ${errors}`,
+    })
+  }
   return { missingInfo: errorFlag, fields: errors }
-
-  // repoError = new BrowserWindow({
-  //   webPreferences: {
-  //     nodeIntegration: true,
-  //     contextIsolation: false,
-  //   },
-  // })
-
-  // // Load html into window
-  // repoError.loadURL(
-  //   url.format({
-  //     pathname: path.join(__dirname, 'windows', 'repoLogin.html'),
-  //     protocol: 'file:',
-  //     slashes: true,
-  //   })
-  // )
-
-  // // Quit app when closed
-  // repoError.on('closed', () => {
-  //   app.quit()
-  // })
 }
 
 let refresh = () => {

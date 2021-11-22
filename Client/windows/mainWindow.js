@@ -64,7 +64,7 @@ for (repo in repos) {
     repos[repo].path == ''
   ) {
     const icon = document.createElement('i')
-    icon.className = 'material-icons'
+    icon.className = 'material-icons left'
     icon.append('error')
     repoItem.appendChild(icon)
   }
@@ -163,7 +163,7 @@ let refresh = () => {
       updatedRepos[repo].path == ''
     ) {
       const icon = document.createElement('i')
-      icon.className = 'material-icons'
+      icon.className = 'material-icons left'
       icon.append('error')
       repoItem.appendChild(icon)
     }
