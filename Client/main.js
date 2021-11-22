@@ -8,16 +8,15 @@ const path = require('path')
 const fs = require('fs')
 
 const { app, BrowserWindow, Menu, ipcMain, dialog } = electron
-const { checkout, update, commit } = require('./commands')
+const { checkout, update, commit, add, del } = require('./commands')
+const { login } = require('./Oauth')
 
 // SVN repository URL
-const URL = 'https://24.210.238.51:8443/svn/ErisTesting/'
+let URL // = 'https://24.210.238.51:8443/svn/ErisTesting/'
 // Path to working directory
-let PATH //= 'E:/Capstone/testSVN'
-
-// SVN username and password
-let USER //= 'Cam'
-let PASSWORD //= 'ErisSVN'
+let PATH
+let PASSWORD
+let USERNAME
 
 let socket
 
@@ -26,14 +25,14 @@ let socket
 // Create WebSocket connection.
 const URI = 'ws://24.210.238.51:6969'
 
-let startSocket = (user, password) => {
+let startSocket = user => {
   socket = new WebSocket(URI)
 
   // Connection opened
   socket.addEventListener('open', function (event) {
     //socket.send('Hello Server!')
     console.log('conencted to websocket server!')
-    socket.send(user)
+    socket.send(user.id)
   })
 
   // Listen for messages
@@ -43,13 +42,15 @@ let startSocket = (user, password) => {
     jsonData = JSON.parse(data)
 
     // Verify username
-    if (jsonData['connected']) {
-      console.log('valid username')
-      socket.send(password)
-    } else if (jsonData['connected'] == false) {
-      console.log('invalid username!')
-    } else if (jsonData['login_success']) {
-      (async () => {
+    // if (jsonData['connected']) {
+    //   console.log('valid username')
+    //   socket.send(password)
+    // } else if (jsonData['connected'] == false) {
+    //   console.log('invalid username!')
+    // } else
+    if (jsonData['login_success']) {
+      // Makes sure that the window is loaded before the render is sent the username
+      ;(async () => {
         await mainWindow.loadURL(
           url.format({
             pathname: path.join(__dirname, 'windows', 'mainWindow.html'),
@@ -58,15 +59,17 @@ let startSocket = (user, password) => {
           })
         )
         await console.log('login successful')
-        await mainWindow.webContents.send('login:user', user)
+        await mainWindow.webContents.send('login:user', user.username)
       })()
     } else if (jsonData['login_success'] == false) {
       console.log('invalid password')
       socket.close()
+      console.log('socket closed')
     }
 
     /////////////////////////////////////////////////////////////////
     // COMMANDS
+    let repoInfo
     switch (jsonData['command']) {
       case 'ping':
         console.log('pinged!')
@@ -76,44 +79,191 @@ let startSocket = (user, password) => {
         break
 
       case 'commit':
-        console.log('commited')
-        socket.send(
-          JSON.stringify({ command_success: true, command: 'commit_response' })
-        )
-        commit(PATH, user, password, jsonData['message'])
-        mainWindow.webContents.send('command', 'SVN commit')
-        break
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('commited')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'commit_response',
+            })
+          )
+          commit(PATH, USERNAME, PASSWORD, jsonData['message'])
+          mainWindow.webContents.send('command', 'SVN commit')
+          break
+        }
 
       case 'update':
-        console.log('updated')
-        socket.send(
-          JSON.stringify({ command_success: true, command: 'update_response' })
-        )
-        update(PATH, user, password)
-        mainWindow.webContents.send('command', 'SVN update')
-        break
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('updated')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'update_response',
+            })
+          )
+          update(PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN update')
+          break
+        }
 
       case 'checkout':
-        console.log('checked out')
-        socket.send(
-          JSON.stringify({
-            command_success: true,
-            command: 'checkout_response',
-          })
-        )
-        checkout(URL, PATH, user, password)
-        mainWindow.webContents.send('command', 'SVN checkout')
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('checked out')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'checkout_response',
+            })
+          )
+          checkout(URL, PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN checkout')
+          break
+        }
+
+      case 'add':
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('files added')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'add_response',
+            })
+          )
+          add(jsonData['files'], PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN add')
+          break
+        }
+
+      case 'remove':
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('files added')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'remove_response',
+            })
+          )
+          del(jsonData['files'], PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN add')
+          break
+        }
+      case 'send_repo_list':
+        let { repos } = jsonData
+        let currentSettings = readSettings()
+        for (repo in repos) {
+          if (repo in currentSettings) {
+            currentSettings[repo].n_commit = repos[repo].commit
+            currentSettings[repo].n_update = repos[repo].update
+            currentSettings[repo].autoUpdate = repos[repo].autoUpdate
+          } else {
+            currentSettings[repo] = {
+              name: '',
+              path: '',
+              username: 'Cam',
+              password: 'ErisSVN',
+              autoUpdate: repos[repo].autoUpdate,
+              n_commit: repos[repo].commit,
+              n_update: repos[repo].update,
+            }
+          }
+        }
+        fs.writeFileSync('./repoSettings.json', JSON.stringify(currentSettings))
+        refresh()
         break
+
+      case 'auto_update':
+        changeRepo(jsonData['repo'])
+        repoInfo = checkRepoInfo(jsonData['repo'])
+        if (repoInfo.missingInfo) {
+          console.log(checkRepoInfo(jsonData['repo']).fields)
+          socket.send(
+            JSON.stringify({
+              command_success: false,
+              command: 'auto_update_response',
+              reason: repoInfo.fields,
+            })
+          )
+          break
+        } else {
+          console.log('updated')
+          socket.send(
+            JSON.stringify({
+              command_success: true,
+              command: 'auto_update_response',
+            })
+          )
+          update(PATH, USERNAME, PASSWORD)
+          mainWindow.webContents.send('command', 'SVN update')
+          break
+        }
     }
   })
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 // ELECTRON
 // Declare windows
 let mainWindow
-let loginWindow
 
 // Listen for app to be ready
 app.on('ready', () => {
@@ -143,55 +293,34 @@ app.on('ready', () => {
   Menu.setApplicationMenu(mainMenu)
 })
 
-// Handle create login window
-// let createLoginWindow = () => {
-//   // Create Window
-//   loginWindow = new BrowserWindow({
-//     width: 300,
-//     height: 500,
-//     title: 'Login',
-//     webPreferences: {
-//       nodeIntegration: true,
-//       contextIsolation: false,
-//     },
-//   })
-
-//   // Load HTML file into window
-//   loginWindow.loadURL(
-//     url.format({
-//       pathname: path.join(__dirname, 'windows', 'login.html'),
-//       protocol: 'file:',
-//       slashes: true,
-//     })
-//   )
-
-//   // Garbage collection handle
-//   loginWindow.on('close', () => {
-//     loginWindow = null
-//   })
-// }
-
 //////////////////////////////////////////////////////
 // INTERPROCESS COMMUNICATION
 ipcMain.on('login', (event, data) => {
-  let { username, password } = data
-  startSocket(username, password)
+  ;(async () => {
+    await login(startSocket)
+  })()
   //loginWindow.close()
 })
 
 ipcMain.on('settings', (event, data) => {
   //console.log(data)
-  let currentSettings = fs.readFileSync('./repoSettings.json')
-  let newSettings = JSON.parse(currentSettings)
+  let currentSettings = readSettings()
+  let newSettings = currentSettings
+  newSettings[URL].autoUpdate = data.autoUpdate
   newSettings[URL].n_commit = data.commit
-  newSettings[URL].n_merge = data.merge
+  newSettings[URL].n_update = data.update
   newSettings[URL].username = data.username
   newSettings[URL].password = data.password
   newSettings[URL].name = data.repoName
   newSettings[URL].path = data.path
   fs.writeFileSync('./repoSettings.json', JSON.stringify(newSettings))
   //console.log(newSettings)
-  //socket.send(JSON.stringify({ settings: data }))
+  mainWindow.webContents.send('settings_saved')
+  socket.send(
+    JSON.stringify({ command: 'update_settings', settings: data, repo: URL })
+  )
+  console.log('sent')
+  refresh()
 })
 
 ipcMain.on('logout', (event, data) => {
@@ -212,8 +341,11 @@ ipcMain.on('changeDir', (event, data) => {
 })
 
 ipcMain.on('change path', (event, data) => {
-  PATH = data
-  console.log(`path changed to ${data}`)
+  changeRepo(data)
+  console.log(`path changed to ${PATH}`)
+  console.log(`repo changed to ${URL}`)
+  console.log(`username changed to ${USERNAME}`)
+  console.log(`password changed to ${PASSWORD}`)
 })
 
 let saveDir = async e => {
@@ -223,33 +355,10 @@ let saveDir = async e => {
   })
   const { filePaths } = fPath
   e.reply('dirSelected', filePaths[0])
-  PATH = filePaths[0]
 }
 
 // Main menu template
-const mainMenuTemplate = [
-  {
-    label: 'File',
-    submenu: [
-      {
-        label: 'Login',
-        click() {
-          createLoginWindow()
-        },
-      },
-      {
-        label: 'Select working directory',
-        click() {
-          saveDir()
-        },
-      },
-      {
-        label: 'Quit',
-        accelerator: process.platform == 'darwin' ? 'Command+Q' : 'Ctrl+Q',
-      },
-    ],
-  },
-]
+const mainMenuTemplate = []
 
 // Add dev tools item if not in production
 if (process.env.NODE_ENV !== 'production') {
@@ -268,4 +377,63 @@ if (process.env.NODE_ENV !== 'production') {
       },
     ],
   })
+}
+
+let changeRepo = repo => {
+  let repos = readSettings()
+  if (repos[repo].path == '') {
+    PATH = ''
+  } else {
+    PATH = repos[repo].path
+  }
+
+  PASSWORD = repos[repo].password
+  USERNAME = repos[repo].username
+
+  URL = repo
+}
+
+let readSettings = () => {
+  if (fs.existsSync('./repoSettings.json')) {
+    let repos = fs.readFileSync('./repoSettings.json')
+    repos = JSON.parse(repos)
+    return repos
+  } else {
+    // Creating a blank json if it doesnt exist
+    fs.writeFileSync('./repoSettings.json', {})
+    return {}
+  }
+}
+
+// {"command": "checkout", "id": 181459954144772096, "target": "Cam", "repo": "https://24.210.238.51:8443/svn/ErisTesting/"}
+let checkRepoInfo = repo => {
+  let repos = readSettings()
+  let errorFlag = false
+  let errors = []
+  if (repos[repo].username == '') {
+    console.log('please fill in username')
+    errorFlag = true
+    errors.push('username')
+  }
+  if (repos[repo].password == '') {
+    console.log('please fill in password')
+    errorFlag = true
+    errors.push('password')
+  }
+  if (repos[repo].path == '') {
+    console.log('please fill in working directory')
+    errorFlag = true
+    errors.push('path')
+  }
+  if (errorFlag) {
+    let errorString = ''
+    dialog.showMessageBox(mainWindow, {
+      message: `Please fill in missing ${errors}`,
+    })
+  }
+  return { missingInfo: errorFlag, fields: errors }
+}
+
+let refresh = () => {
+  mainWindow.webContents.send('refresh')
 }

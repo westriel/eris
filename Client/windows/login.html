@@ -6,42 +6,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link
       rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+      integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://kit.fontawesome.com/11f276d64e.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <title>Discord Test</title>
+    <!-- Compiled and minified CSS -->
+    <link
+      rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
     />
-    <title>Login</title>
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   </head>
   <body>
-    <form>
-      <div>
-        <label>Username</label>
-        <input type="text" id="username" autofocus />
+    <div class="container valign-wrapper" style="height: 100vh">
+      <div class="card" style="margin-left: auto; margin-right: auto">
+        <div class="card-content center">
+          <p class="card-title">Sign In</p>
+        </div>
+        <div class="card-action">
+          <a href="#" id="Oauth" class="btn-large"
+            ><i class="fab fa-discord left"></i>Sign in with Discord</a
+          >
+        </div>
       </div>
-      <div>
-        <label>Password</label>
-        <input type="password" id="password" />
-      </div>
-      <button
-        class="btn waves-effect waves-light indigo accent-2"
-        type="submit"
-      >
-        Login
-      </button>
-    </form>
+    </div>
 
     <script>
       const { ipcRenderer } = require('electron')
-
-      // Send form info to main process
-      let submitForm = event => {
-        event.preventDefault()
-        const username = document.querySelector('#username').value
-        const password = document.querySelector('#password').value
-        ipcRenderer.send('login', { username: username, password: password })
-        //location.replace('mainWindow.html')
-      }
-
-      const form = document.querySelector('form')
-      form.addEventListener('submit', submitForm)
+      let a = document.querySelector('#Oauth')
+      a.addEventListener('click', () => {
+        ipcRenderer.send('login')
+      })
     </script>
   </body>
 </html>
