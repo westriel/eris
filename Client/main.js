@@ -86,7 +86,7 @@ let startSocket = user => {
           socket.send(
             JSON.stringify({
               command_success: false,
-              command: 'update_response',
+              command: 'commit_response',
               reason: repoInfo.fields,
             })
           )
@@ -138,7 +138,7 @@ let startSocket = user => {
           socket.send(
             JSON.stringify({
               command_success: false,
-              command: 'update_response',
+              command: 'checkout_response',
               reason: repoInfo.fields,
             })
           )
@@ -164,7 +164,7 @@ let startSocket = user => {
           socket.send(
             JSON.stringify({
               command_success: false,
-              command: 'update_response',
+              command: 'add_response',
               reason: repoInfo.fields,
             })
           )
@@ -190,7 +190,7 @@ let startSocket = user => {
           socket.send(
             JSON.stringify({
               command_success: false,
-              command: 'update_response',
+              command: 'remove_response',
               reason: repoInfo.fields,
             })
           )
@@ -219,8 +219,8 @@ let startSocket = user => {
             currentSettings[repo] = {
               name: '',
               path: '',
-              username: 'Cam',
-              password: 'ErisSVN',
+              username: '',
+              password: '',
               autoUpdate: repos[repo].autoUpdate,
               n_commit: repos[repo].commit,
               n_update: repos[repo].update,
@@ -245,7 +245,7 @@ let startSocket = user => {
           )
           break
         } else {
-          console.log('updated')
+          console.log('auto updated')
           socket.send(
             JSON.stringify({
               command_success: true,
@@ -253,7 +253,7 @@ let startSocket = user => {
             })
           )
           update(PATH, USERNAME, PASSWORD)
-          mainWindow.webContents.send('command', 'SVN update')
+          mainWindow.webContents.send('command', 'ERIS auto update')
           break
         }
     }

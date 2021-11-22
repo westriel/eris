@@ -1,3 +1,4 @@
+// text
 const electron = require('electron')
 const url = require('url')
 const path = require('path')
@@ -61,6 +62,7 @@ let login = socketCallback => {
       const user = await getUser.json()
       console.log(user)
       socketCallback(user)
+      login.close()
     })()
   })
 
