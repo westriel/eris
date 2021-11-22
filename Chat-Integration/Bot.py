@@ -26,8 +26,15 @@ class MyClient(discord.Client):
     async def process_commands(self,message):
         command = message.content.split()[0].lower()
         #Command List Here
+        #ADMIN COMMANDS
         if(command == "e!ping"):
             await self.ping(message)
+        elif(command == "e!add_repo"):
+            await self.admin_add_repo(message)
+        elif(command == "e!add_user"):
+            await self.admin_add_user(message)
+
+        #USER COMMANDS
         elif(command == "e!switch"):
             await self.switch(message)
         elif(command == "e!commit"):
@@ -36,6 +43,36 @@ class MyClient(discord.Client):
             await self.update(message)
         elif(command == "e!checkout"):
             await self.checkout(message)
+        elif(command == "e!add"):
+            await self.add(message)
+        elif(command == "e!remove"):
+            await self.remove(message)
+
+    async def admin_add_repo(self,message):
+        start = time.time()
+        command = message.content.split()
+        if(len(command) != 2):
+           await message.content.send("Invalid usage: `add_repo`")
+           return
+        print("Adding new repo:",command[1])
+        await self.websocket.send(json.dumps({"command":"admin_add_repo","url":command[1],"id":str(message.author.id)}))
+        print("Waiting for conf...")
+        resp = json.loads(await self.websocket.recv())
+        await message.channel.send(str(resp))
+
+    async def admin_add_user(self,message):
+        start = time.time()
+        command = message.content.split()
+        if(len(command) < 3):
+            await message.content.send("Invalid usage: `add_user`")
+            return
+        print("Adding user(s):",command[2:],"to repo:",command[1])
+        ids = [x.id for x in message.mentions]
+        await self.websocket.send(json.dumps({"command":"admin_add_user","users":ids,"repo":command[1],"id":str(message.author.id)}))
+        print("Waiting for conf...")
+        resp = json.loads(await self.websocket.recv())
+        await message.channel.send(str(resp))
+        
 
     async def switch(self,message):
         start = time.time()
@@ -97,6 +134,23 @@ class MyClient(discord.Client):
         string += "BOT : "+str(bot_ping)+"s"
         await message.channel.send(string)
 
+    async def add(self,message):
+        start = time.time()
+        print("Sending add command")
+        await self.websocket.send(json.dumps({"command":"add","id":str(message.author.id),"files":message.content.split()[1:]}))
+        print("Waiting for conf...")
+        resp = json.loads(await self.websocket.recv())
+        await message.channel.send(resp)
+
+    async def remove(self,message):
+        start = time.time()
+        print("Sending remove command")
+        await self.websocket.send(json.dumps({"command":"remove","id":str(message.author.id),"files":message.content.split()[1:]}))
+        print("Waiting for conf...")
+        resp = json.loads(await self.websocket.recv())
+        await message.channel.send(resp)
+        
+        
     #WHEN READY
     async def on_ready(self):
         await self.change_presence(activity=discord.Game(name = "game"))

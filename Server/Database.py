@@ -60,7 +60,7 @@ class Database:
     def UpdateUserRepoSettings(self,username,repo,settings):
         try:
             cursor = self.conn.cursor()
-            QUERY = "UPDATE notification_settings SET commit_update = {commit}, merge_update = {merge} WHERE user_name = \"{username}\" and address = \"{repo}\"".format(commit = settings["commit"], merge = settings["merge"], username=username, repo = repo)
+            QUERY = "UPDATE notification_settings SET commit_update = {commit}, update_update = {update}, auto_update = {auto} WHERE user_name = \"{username}\" and address = \"{repo}\"".format(commit = settings["commit"], update = settings["update"],auto = settings["autoUpdate"], username=username, repo = repo)
             status = cursor.execute(QUERY)
             self.conn.commit()
             return status
@@ -105,4 +105,66 @@ class Database:
             return cursor.fetchall()[0][0]
         except pymysql.Error as e:
             print("GetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
+
+    def IsUserAdmin(self,username):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT is_admin FROM user WHERE user_name = \"{username}\"".format(username=username)
+            status = cursor.execute(QUERY)
+            return bool(cursor.fetchall()[0][0])
+        except pymysql.Error as e:
+            print("IsUserAdmin Error %d: %s" % (e.args[0], e.args[1]))
+
+    def AddNewRepo(self,url):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "INSERT INTO svn_repo (address) VALUES (\"{url}\")".format(url=url)
+            status = cursor.execute(QUERY)
+            self.conn.commit()
+            return bool(status)
+        except pymysql.Error as e:
+            print("AddNewRepo Error %d: %s" % (e.args[0], e.args[1]))
+
+    def DoesUserHaveRepoAccess(self,username,repo):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT * FROM repo_access WHERE address = \"{repo}\" and user_name = \"{username}\"".format(repo=repo,username=username)
+            status = cursor.execute(QUERY)
+            return bool(status)
+        except pymysql.Error as e:
+            print("DoesUserHaveRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
+
+    def GiveUserRepoAccess(self,username,repo):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "INSERT INTO repo_access (address,user_name) VALUES (\"{repo}\",\"{username}\")".format(repo=repo,username=username)
+            status = cursor.execute(QUERY)
+            self.conn.commit()
+            return bool(status)
+        except pymysql.Error as e:
+            print("GiveUserRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
+
+    def GetUserRepoList(self,user):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT * FROM notification_settings WHERE user_name = \"{username}\"".format(username=user)
+            status = cursor.execute(QUERY)
+            data = {}
+            for line in cursor.fetchall():
+                data[line[1]] = {"commit":line[2],"update":line[3],"autoUpdate":line[4]}
+            return data
+        except pymysql.Error as e:
+            print("GetUserRepoList Error %d: %s" % (e.args[0], e.args[1]))
+
+    def GetAllUsersWithAccessToRepo(self,repo,username_exclude):
+        try:
+            cursor = self.conn.cursor()
+            QUERY = "SELECT user_name FROM repo_access WHERE address = \"{repo}\" and user_name <> \"{exclude}\"".format(repo=repo,exclude=username_exclude)
+            status = cursor.execute(QUERY)
+            users = []
+            for line in cursor.fetchall():
+                users.append(line[0])
+            return users
+        except pymysql.Error as e:
+            print("GetAllUsersWithAccessToRepo Error %d: %s" % (e.args[0], e.args[1]))
             
