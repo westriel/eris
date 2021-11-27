@@ -83,7 +83,9 @@ ipcRenderer.on('command', (event, command) => {
   const p = document.createElement('p')
   p.className = 'collection-item '
   const textItem = document.createTextNode(
-    `${time.getHours()}:${time.getMinutes()} | ${command}`
+    `${time.getHours()}:${
+      time.getMinutes() < 10 ? '0' + time.getMinutes() : time.getMinutes()
+    } | ${command}`
   )
   p.appendChild(textItem)
   log.appendChild(p)

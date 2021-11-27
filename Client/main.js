@@ -62,6 +62,9 @@ let startSocket = user => {
         await mainWindow.webContents.send('login:user', user.username)
       })()
     } else if (jsonData['login_success'] == false) {
+      dialog.showMessageBox(mainWindow, {
+        message: `Invalid Login`,
+      })
       console.log('invalid password')
       socket.close()
       console.log('socket closed')
@@ -289,8 +292,7 @@ app.on('ready', () => {
     app.quit()
   })
 
-  const mainMenu = Menu.buildFromTemplate(mainMenuTemplate)
-  Menu.setApplicationMenu(mainMenu)
+  Menu.setApplicationMenu(null)
 })
 
 //////////////////////////////////////////////////////
@@ -355,28 +357,6 @@ let saveDir = async e => {
   })
   const { filePaths } = fPath
   e.reply('dirSelected', filePaths[0])
-}
-
-// Main menu template
-const mainMenuTemplate = []
-
-// Add dev tools item if not in production
-if (process.env.NODE_ENV !== 'production') {
-  mainMenuTemplate.push({
-    label: 'Developer Tools',
-    submenu: [
-      {
-        label: 'Toggle DevTools',
-        accelerator: process.platform == 'darwin' ? 'Command+I' : 'Ctrl+I',
-        click(item, focusedWindow) {
-          focusedWindow.toggleDevTools()
-        },
-      },
-      {
-        role: 'reload',
-      },
-    ],
-  })
 }
 
 let changeRepo = repo => {

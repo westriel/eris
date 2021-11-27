@@ -1,10 +1,14 @@
 {
   "name": "client",
+  "productName": "ERIS Client",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icons/mac/icon.icns --prune=true --out=release-builds",
+    "package-win": "electron-packager . client --overwrite --asar=true --platform=win32 --arch=ia32 --icon=assets/icons/win/icon.ico --prune=true --out=release-builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"ERIS\"",
+    "package-linux": "electron-packager . client --overwrite --asar=true --platform=linux --arch=x64 --icon=assets/icons/png/icon .png --prune=true --out=release-builds"
   },
   "author": "",
   "license": "ISC",
@@ -13,5 +17,8 @@
     "electron": "^15.3.1",
     "node-svn-ultimate": "^1.2.1",
     "ws": "^8.2.3"
+  },
+  "devDependencies": {
+    "electron-packager": "^15.4.0"
   }
 }
