@@ -18,14 +18,15 @@ let PATH
 let PASSWORD
 let USERNAME
 
-const settingsPath = path.join(__dirname, 'repoSettings.txt')
-
 let socket
+let discord
 
 /////////////////////////////////////////////////////////////////
 // WEBSOCKETS
 // Create WebSocket connection.
-const URI = 'ws://192.168.1.231:6969'
+let getURI = fs.readFileSync('./uri.json')
+getURI = JSON.parse(getURI)
+const URI = getURI.URI
 
 let startSocket = user => {
   socket = new WebSocket(URI)
@@ -34,6 +35,7 @@ let startSocket = user => {
   socket.addEventListener('open', function (event) {
     //socket.send('Hello Server!')
     console.log('conencted to websocket server!')
+    discord = user
     socket.send(user.id)
   })
 
@@ -426,5 +428,5 @@ let checkRepoInfo = repo => {
 
 let refresh = () => {
   mainWindow.webContents.send('refresh')
-  socket.send(JSON.stringify({ command: 'send_repo_list', id: user.id }))
+  socket.send(JSON.stringify({ command: 'send_repo_list', id: discord.id }))
 }
