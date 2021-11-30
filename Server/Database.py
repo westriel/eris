@@ -16,13 +16,14 @@ class Database:
         self.PASSWORD = data["password"]
 
 
-        self.conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+        conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
            
 
 
     def CheckUsername(self,username):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             #QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
             QUERY = "SELECT * FROM user WHERE user_name = \"{username}\"".format(username=username)
             data = cursor.execute(QUERY)
@@ -35,17 +36,19 @@ class Database:
 
     def CreateUser(self,username):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "INSERT INTO user (user_name, is_admin, current_repo) VALUES (\"{username}\", 0, null)".format(username=username)
             data = cursor.execute(QUERY)
-            self.conn.commit()
+            conn.commit()
             return bool(data)
         except pymysql.Error as e:
             print("CreateUser Error %d: %s" % (e.args[0], e.args[1]))
 
     def GetUsernameFromDiscordID(self,dis_id):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT user_name FROM user WHERE discord_user_id = \"{dis_id}\";".format(dis_id = dis_id)
             cursor.execute(QUERY)
             data = cursor.fetchall()
@@ -59,10 +62,11 @@ class Database:
 
     def UpdateUserRepoSettings(self,username,repo,settings):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "UPDATE notification_settings SET commit_update = {commit}, update_update = {update}, auto_update = {auto} WHERE user_name = \"{username}\" and address = \"{repo}\"".format(commit = settings["commit"], update = settings["update"],auto = settings["autoUpdate"], username=username, repo = repo)
             status = cursor.execute(QUERY)
-            self.conn.commit()
+            conn.commit()
             return status
 
         except pymysql.Error as e:
@@ -70,7 +74,8 @@ class Database:
 
     def CheckIfRepoExists(self,repo):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT address FROM svn_repo WHERE address = \"{address}\"".format(address=repo)
             status = cursor.execute(QUERY)
             return bool(len(cursor.fetchall()))
@@ -80,7 +85,8 @@ class Database:
     def CheckIfUserHasRepoAccess(self,username,repo):
         print(username,repo)
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT * FROM repo_access WHERE user_name = \"{username}\" AND address = \"{repo}\"".format(username=username,repo=repo)
             status = cursor.execute(QUERY)
             return bool(len(cursor.fetchall()))
@@ -89,17 +95,19 @@ class Database:
 
     def SetUserCurrentRepo(self,username,repo):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "UPDATE user SET current_repo = \"{repo}\" WHERE user_name = \"{username}\"".format(repo=repo,username=username)
             status = cursor.execute(QUERY)
-            self.conn.commit()
+            conn.commit()
             return bool(status)
         except pymysql.Error as e:
             print("SetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
 
     def GetUserCurrentRepo(self,username):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT current_repo FROM user WHERE user_name = \"{username}\"".format(username=username)
             status = cursor.execute(QUERY)
             return cursor.fetchall()[0][0]
@@ -108,7 +116,8 @@ class Database:
 
     def IsUserAdmin(self,username):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT is_admin FROM user WHERE user_name = \"{username}\"".format(username=username)
             status = cursor.execute(QUERY)
             return bool(cursor.fetchall()[0][0])
@@ -117,17 +126,19 @@ class Database:
 
     def AddNewRepo(self,url):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "INSERT INTO svn_repo (address) VALUES (\"{url}\")".format(url=url)
             status = cursor.execute(QUERY)
-            self.conn.commit()
+            conn.commit()
             return bool(status)
         except pymysql.Error as e:
             print("AddNewRepo Error %d: %s" % (e.args[0], e.args[1]))
 
     def DoesUserHaveRepoAccess(self,username,repo):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT * FROM repo_access WHERE address = \"{repo}\" and user_name = \"{username}\"".format(repo=repo,username=username)
             status = cursor.execute(QUERY)
             return bool(status)
@@ -136,17 +147,19 @@ class Database:
 
     def GiveUserRepoAccess(self,username,repo):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "INSERT INTO repo_access (address,user_name) VALUES (\"{repo}\",\"{username}\")".format(repo=repo,username=username)
             status = cursor.execute(QUERY)
-            self.conn.commit()
+            conn.commit()
             return bool(status)
         except pymysql.Error as e:
             print("GiveUserRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
 
     def GetUserRepoList(self,user):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT * FROM notification_settings WHERE user_name = \"{username}\"".format(username=user)
             status = cursor.execute(QUERY)
             data = {}
@@ -158,7 +171,8 @@ class Database:
 
     def GetAllUsersWithAccessToRepo(self,repo,username_exclude):
         try:
-            cursor = self.conn.cursor()
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
             QUERY = "SELECT user_name FROM repo_access WHERE address = \"{repo}\" and user_name <> \"{exclude}\"".format(repo=repo,exclude=username_exclude)
             status = cursor.execute(QUERY)
             users = []
@@ -167,4 +181,16 @@ class Database:
             return users
         except pymysql.Error as e:
             print("GetAllUsersWithAccessToRepo Error %d: %s" % (e.args[0], e.args[1]))
+
+
+    def GetSettingValueFromUserAndRepo(self,username,setting,repo):
+        try:
+            conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
+            cursor = conn.cursor()
+            QUERY = "SELECT {setting} FROM notification_settings WHERE user_name = \"{username}\" AND address = \"{repo}\"".format(repo=repo,username=username,setting=setting)
+            stauts = cursor.execute(QUERY)
+            return cursor.fetchall()[0][0]
+        except pymysql.Error as e:
+            print("GetSettingValueFromUserAndRepo Error %d: %s" % (e.args[0], e.args[1]))
+            
             
