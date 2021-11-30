@@ -26,6 +26,7 @@ let update = (path, user, password) => {
     },
     err => {
       console.log('Update complete!')
+      console.log(err)
     }
   )
 }
