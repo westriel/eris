@@ -243,7 +243,7 @@ let startSocket = user => {
           }
         }
         fs.writeFileSync('./repoSettings.json', JSON.stringify(currentSettings))
-        refresh()
+        mainWindow.webContents.send('refresh')
         break
 
       case 'auto_update':
@@ -265,6 +265,7 @@ let startSocket = user => {
             JSON.stringify({
               command_success: true,
               command: 'auto_update_response',
+              repo: jsonData['repo'],
             })
           )
           update(PATH, USERNAME, PASSWORD)
@@ -425,4 +426,5 @@ let checkRepoInfo = repo => {
 
 let refresh = () => {
   mainWindow.webContents.send('refresh')
+  socket.send(JSON.stringify({ command: 'send_repo_list', id: user.id }))
 }
