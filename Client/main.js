@@ -18,12 +18,14 @@ let PATH
 let PASSWORD
 let USERNAME
 
+const settingsPath = path.join(__dirname, 'repoSettings.txt')
+
 let socket
 
 /////////////////////////////////////////////////////////////////
 // WEBSOCKETS
 // Create WebSocket connection.
-const URI = 'ws://24.210.238.51:6969'
+const URI = 'ws://192.168.1.231:6969'
 
 let startSocket = user => {
   socket = new WebSocket(URI)
@@ -33,6 +35,16 @@ let startSocket = user => {
     //socket.send('Hello Server!')
     console.log('conencted to websocket server!')
     socket.send(user.id)
+  })
+
+  socket.on('close', () => {
+    mainWindow.loadURL(
+      url.format({
+        pathname: path.join(__dirname, 'windows', 'login.html'),
+        protocol: 'file:',
+        slashes: true,
+      })
+    )
   })
 
   // Listen for messages
@@ -344,10 +356,6 @@ ipcMain.on('changeDir', (event, data) => {
 
 ipcMain.on('change path', (event, data) => {
   changeRepo(data)
-  console.log(`path changed to ${PATH}`)
-  console.log(`repo changed to ${URL}`)
-  console.log(`username changed to ${USERNAME}`)
-  console.log(`password changed to ${PASSWORD}`)
 })
 
 let saveDir = async e => {
@@ -390,17 +398,17 @@ let checkRepoInfo = repo => {
   let repos = readSettings()
   let errorFlag = false
   let errors = []
-  if (repos[repo].username == '') {
+  if (repos[repo].username == '' || repos[repo].username == null) {
     console.log('please fill in username')
     errorFlag = true
     errors.push('username')
   }
-  if (repos[repo].password == '') {
+  if (repos[repo].password == '' || repos[repo].password == null) {
     console.log('please fill in password')
     errorFlag = true
     errors.push('password')
   }
-  if (repos[repo].path == '') {
+  if (repos[repo].path == '' || repos[repo].path == null) {
     console.log('please fill in working directory')
     errorFlag = true
     errors.push('path')
@@ -408,10 +416,11 @@ let checkRepoInfo = repo => {
   if (errorFlag) {
     let errorString = ''
     dialog.showMessageBox(mainWindow, {
-      message: `Please fill in missing ${errors}`,
+      message: `Missing repository settings: ${errors}`,
     })
   }
-  return { missingInfo: errorFlag, fields: errors }
+  let returnString = `Missing repository settings: ${errors}`
+  return { missingInfo: errorFlag, fields: returnString }
 }
 
 let refresh = () => {
