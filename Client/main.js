@@ -55,13 +55,6 @@ let startSocket = user => {
     data = event.data
     jsonData = JSON.parse(data)
 
-    // Verify username
-    // if (jsonData['connected']) {
-    //   console.log('valid username')
-    //   socket.send(password)
-    // } else if (jsonData['connected'] == false) {
-    //   console.log('invalid username!')
-    // } else
     if (jsonData['login_success']) {
       // Makes sure that the window is loaded before the render is sent the username
       ;(async () => {
@@ -75,6 +68,7 @@ let startSocket = user => {
         await console.log('login successful')
         await mainWindow.webContents.send('login:user', user.username)
       })()
+      // if lagin success is flase, show a failed login popup
     } else if (jsonData['login_success'] == false) {
       dialog.showMessageBox(mainWindow, {
         message: `Invalid Login`,
@@ -88,6 +82,7 @@ let startSocket = user => {
     // COMMANDS
     let repoInfo
     switch (jsonData['command']) {
+      // ping
       case 'ping':
         console.log('pinged!')
         socket.send(JSON.stringify({ command: 'ping_response' }))
@@ -95,7 +90,9 @@ let startSocket = user => {
         console.log('pong sent!')
         break
 
+      // Commit
       case 'commit':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -109,6 +106,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('commited')
           socket.send(
             JSON.stringify({
@@ -121,7 +119,9 @@ let startSocket = user => {
           break
         }
 
+      // Update
       case 'update':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -135,6 +135,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('updated')
           socket.send(
             JSON.stringify({
@@ -147,7 +148,9 @@ let startSocket = user => {
           break
         }
 
+      // Checkout
       case 'checkout':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -161,6 +164,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('checked out')
           socket.send(
             JSON.stringify({
@@ -173,7 +177,9 @@ let startSocket = user => {
           break
         }
 
+      // Add
       case 'add':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -187,6 +193,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('files added')
           socket.send(
             JSON.stringify({
@@ -199,7 +206,9 @@ let startSocket = user => {
           break
         }
 
+      // Remove
       case 'remove':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -213,6 +222,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('files added')
           socket.send(
             JSON.stringify({
@@ -224,14 +234,19 @@ let startSocket = user => {
           mainWindow.webContents.send('command', 'SVN add')
           break
         }
+
+      // Repo list is sent to client
       case 'send_repo_list':
         let { repos } = jsonData
         let currentSettings = readSettings()
+        // Fill in the settings for each repo
         for (repo in repos) {
+          // if they exist, fill in info
           if (repo in currentSettings) {
             currentSettings[repo].n_commit = repos[repo].commit
             currentSettings[repo].n_update = repos[repo].update
             currentSettings[repo].autoUpdate = repos[repo].autoUpdate
+            // if they are new fill in info and create empty fields
           } else {
             currentSettings[repo] = {
               name: '',
@@ -249,6 +264,7 @@ let startSocket = user => {
         break
 
       case 'auto_update':
+        // Check for missing info
         changeRepo(jsonData['repo'])
         repoInfo = checkRepoInfo(jsonData['repo'])
         if (repoInfo.missingInfo) {
@@ -262,6 +278,7 @@ let startSocket = user => {
           )
           break
         } else {
+          // complete command and send status to the server
           console.log('auto updated')
           socket.send(
             JSON.stringify({
@@ -319,8 +336,9 @@ ipcMain.on('login', (event, data) => {
   //loginWindow.close()
 })
 
+// Recieve settings from frontend
 ipcMain.on('settings', (event, data) => {
-  //console.log(data)
+  // store settings in json
   let currentSettings = readSettings()
   let newSettings = currentSettings
   newSettings[URL].autoUpdate = data.autoUpdate
@@ -331,8 +349,10 @@ ipcMain.on('settings', (event, data) => {
   newSettings[URL].name = data.repoName
   newSettings[URL].path = data.path
   fs.writeFileSync('./repoSettings.json', JSON.stringify(newSettings))
-  //console.log(newSettings)
+
+  // update the frontend
   mainWindow.webContents.send('settings_saved')
+  // send updated se  ttings to server
   socket.send(
     JSON.stringify({ command: 'update_settings', settings: data, repo: URL })
   )
@@ -340,9 +360,10 @@ ipcMain.on('settings', (event, data) => {
   refresh()
 })
 
+// Logout
 ipcMain.on('logout', (event, data) => {
+  // close socket connection
   socket.close()
-  console.log('socket closed')
   // Load html into window
   mainWindow.loadURL(
     url.format({
@@ -353,23 +374,28 @@ ipcMain.on('logout', (event, data) => {
   )
 })
 
+// sets working directory for repo
 ipcMain.on('changeDir', (event, data) => {
   saveDir(event)
 })
 
+// switches current repo on click
 ipcMain.on('change path', (event, data) => {
   changeRepo(data)
 })
 
+// handles selecting directory
 let saveDir = async e => {
   const fPath = await dialog.showOpenDialog({
     buttonLabel: 'Select Directory',
     properties: ['openDirectory'],
   })
   const { filePaths } = fPath
+  // send selected path to the frontend
   e.reply('dirSelected', filePaths[0])
 }
 
+// changes the working dir, username, and password for repo
 let changeRepo = repo => {
   let repos = readSettings()
   if (repos[repo].path == '') {
@@ -384,38 +410,51 @@ let changeRepo = repo => {
   URL = repo
 }
 
+// reads the repoSettings.json
 let readSettings = () => {
   if (fs.existsSync('./repoSettings.json')) {
     let repos = fs.readFileSync('./repoSettings.json')
     repos = JSON.parse(repos)
+    // returns repo's settings as JS object
     return repos
   } else {
     // Creating a blank json if it doesnt exist
-    fs.writeFileSync('./repoSettings.json', {})
+    // !!!-NOT WORKING-!!!
+    fs.writeFileSync('./repoSettings.json', {}, err => {
+      console.log('created file')
+    })
     return {}
   }
 }
 
-// {"command": "checkout", "id": 181459954144772096, "target": "Cam", "repo": "https://24.210.238.51:8443/svn/ErisTesting/"}
+// checks of the repo has a working dir, username, and password
+// returns a JS object with a bool representing missing info and a string with what info is missing
 let checkRepoInfo = repo => {
   let repos = readSettings()
   let errorFlag = false
   let errors = []
+  // checks if username is set
   if (repos[repo].username == '' || repos[repo].username == null) {
     console.log('please fill in username')
     errorFlag = true
+    // pushes username to ouput array
     errors.push('username')
   }
+  // checks if password is set
   if (repos[repo].password == '' || repos[repo].password == null) {
     console.log('please fill in password')
     errorFlag = true
+    // pushes password to ouput array
     errors.push('password')
   }
+  // checks if working dir is set
   if (repos[repo].path == '' || repos[repo].path == null) {
     console.log('please fill in working directory')
     errorFlag = true
+    // pushes path to ouput array
     errors.push('path')
   }
+  // if theres anything missing, send popup that displays whats missing
   if (errorFlag) {
     let errorString = ''
     dialog.showMessageBox(mainWindow, {
@@ -423,9 +462,11 @@ let checkRepoInfo = repo => {
     })
   }
   let returnString = `Missing repository settings: ${errors}`
+  // return missing info bool and return string
   return { missingInfo: errorFlag, fields: returnString }
 }
 
+// sends refresh command to frontend
 let refresh = () => {
   mainWindow.webContents.send('refresh')
   socket.send(JSON.stringify({ command: 'send_repo_list', id: discord.id }))

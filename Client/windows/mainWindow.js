@@ -35,6 +35,7 @@ let selectRepo = event => {
   repoName.setAttribute('value', currentSettings[id].name)
   dirName.setAttribute('value', currentSettings[id].path)
 
+  // sets checkboxes to right value
   currentSettings[id].autoUpdate
     ? autoUpdate.setAttribute('checked', '')
     : autoUpdate.removeAttribute('checked')
@@ -44,20 +45,21 @@ let selectRepo = event => {
   currentSettings[id].n_update
     ? update.setAttribute('checked', '')
     : update.removeAttribute('checked')
-
-  //document.querySelector(`#${id}`).classList.add('active')
 }
 
 // Fill sidenav with list of available repos
 for (repo in repos) {
   let name = repo
+  // if there is a nickname set, have it be displayed
   if (repos[repo].name != '') {
     name = repos[repo].name
   }
   const repoItem = document.createElement('a')
+  // truncate repo names
   repoItem.className = 'collection-item truncate repo'
   repoItem.id = repo
   const textItem = document.createTextNode(name)
+  // if username, password, or dir is not set, display warning
   if (
     repos[repo].username == '' ||
     repos[repo].password == '' ||
@@ -70,6 +72,7 @@ for (repo in repos) {
   }
   repoItem.appendChild(textItem)
   sidenav.appendChild(repoItem)
+  // add click listener for each repo
   repoItem.addEventListener('click', selectRepo)
 }
 
@@ -78,11 +81,12 @@ const { ipcRenderer } = require('electron')
 const log = document.querySelector('#log')
 // receive commands from main process
 ipcRenderer.on('command', (event, command) => {
-  console.log(command)
+  // log the command, and the time it was sent
   const time = new Date()
   const p = document.createElement('p')
   p.className = 'collection-item '
   const textItem = document.createTextNode(
+    // if the minuites are less than 10, format it so there is a leading 0
     `${time.getHours()}:${
       time.getMinutes() < 10 ? '0' + time.getMinutes() : time.getMinutes()
     } | ${command}`
@@ -93,12 +97,13 @@ ipcRenderer.on('command', (event, command) => {
 
 // set login display
 const loginDisplay = document.querySelector('#loginDisplay')
+// set login display with discord name
 ipcRenderer.on('login:user', (event, username) => {
-  console.log('test test')
   const userText = document.createTextNode(`logged in as: ${username}`)
   loginDisplay.appendChild(userText)
 })
 
+// logout
 let closeSocket = () => {
   ipcRenderer.send('logout')
   loginDisplay.innerText = ''
@@ -107,7 +112,6 @@ let closeSocket = () => {
 // Send form info to main process
 let submitForm = event => {
   event.preventDefault()
-  console.log('yeet')
   const autoUpdate = document.querySelector('#autoupdate').checked
   const commit = document.querySelector('#commit').checked
   const update = document.querySelector('#update').checked
@@ -126,6 +130,7 @@ let submitForm = event => {
   })
 }
 
+// have backend bring up directory dialog
 ipcRenderer.on('dirSelected', (event, data) => {
   document.querySelector('#dir').setAttribute('value', data)
 })
@@ -140,6 +145,7 @@ let refresh = () => {
   // repo list parent
   let repoList = document.querySelector('.sidenav')
 
+  // clear repo list
   while (repoList.lastChild) {
     if (repoList.lastChild.className == 'collection-header') {
       console.log('cleared')
@@ -150,6 +156,7 @@ let refresh = () => {
   }
   console.log(updatedRepos)
 
+  // repopulate repo list
   for (repo in updatedRepos) {
     let name = repo
     if (updatedRepos[repo].name != '') {
@@ -175,10 +182,12 @@ let refresh = () => {
   }
 }
 
+// send refresh command back to backend
 ipcRenderer.on('refresh', (event, data) => {
   refresh()
 })
 
+// add click listeners
 const dirBtn = document.querySelector('#changeDir')
 dirBtn.addEventListener('click', saveDir)
 const logout = document.querySelector('#logout')
