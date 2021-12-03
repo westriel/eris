@@ -1,8 +1,14 @@
 import pymysql
 
+#############################################################################
+# Class that acts as interface between the Server Prorgam and the Database.
+# Every function reopens the connection to prevent the Database from closing
+#     the connection over time
+#############################################################################
+
 class Database:
 
-    def __init__(self):
+    def __init__(self): # Constructor
 
         print("Creating Database Connection")
         
@@ -12,28 +18,24 @@ class Database:
         file = open("TOKENS.txt")
         data = eval(file.read())
 
+        # Database login info for the bot
         self.USERNAME = data["username"]
         self.PASSWORD = data["password"]
+        
+        file.close()          
 
-
-        conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
-           
-
-
+    # Check if user exists
     def CheckUsername(self,username):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
             cursor = conn.cursor()
-            #QUERY = "SELECT * FROM user WHERE user_name = \"{username}\" and password_hash = \"{password}\";".format(username=username,password=password)
             QUERY = "SELECT * FROM user WHERE user_name = \"{username}\"".format(username=username)
             data = cursor.execute(QUERY)
-##            for row in cursor:
-##                print(row)
-##            print("LEN",data)
             return bool(data)
         except pymysql.Error as e:
             print("CheckUsername Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Create user in database
     def CreateUser(self,username):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -45,6 +47,8 @@ class Database:
         except pymysql.Error as e:
             print("CreateUser Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Get a user's username from their Discord ID
+    # NOT IN USE - DEPRECIATED
     def GetUsernameFromDiscordID(self,dis_id):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -60,6 +64,7 @@ class Database:
         except pymysql.Error as e:
             print("GetUsernameFromDiscordID Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Update a user's notification settings
     def UpdateUserRepoSettings(self,username,repo,settings):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -72,6 +77,7 @@ class Database:
         except pymysql.Error as e:
             print("UpdateUserRepoSettings Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Returns true if the repo exists
     def CheckIfRepoExists(self,repo):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -82,6 +88,7 @@ class Database:
         except pymysql.Error as e:
             print("CheckIfRepoExists Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Returns true if the user can access the specified repo
     def CheckIfUserHasRepoAccess(self,username,repo):
         print(username,repo)
         try:
@@ -93,6 +100,7 @@ class Database:
         except pymysql.Error as e:
             print("CheckIfUserHasRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Sets the user's current repo to the specified repo
     def SetUserCurrentRepo(self,username,repo):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -104,6 +112,7 @@ class Database:
         except pymysql.Error as e:
             print("SetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Returns the user's current set repo
     def GetUserCurrentRepo(self,username):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -114,6 +123,7 @@ class Database:
         except pymysql.Error as e:
             print("GetUserCurrentRepo Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Checks if the user is an admin
     def IsUserAdmin(self,username):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -124,6 +134,7 @@ class Database:
         except pymysql.Error as e:
             print("IsUserAdmin Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Adds a new repo to the database
     def AddNewRepo(self,url):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -135,6 +146,7 @@ class Database:
         except pymysql.Error as e:
             print("AddNewRepo Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Checks if user can acces a repo. Duplicate of CheckIfUserHasRepoAccess
     def DoesUserHaveRepoAccess(self,username,repo):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -145,6 +157,7 @@ class Database:
         except pymysql.Error as e:
             print("DoesUserHaveRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Gives the user access to the repo
     def GiveUserRepoAccess(self,username,repo):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -156,6 +169,7 @@ class Database:
         except pymysql.Error as e:
             print("GiveUserRepoAccess Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Returns the list of all repos a user can access
     def GetUserRepoList(self,user):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -169,6 +183,7 @@ class Database:
         except pymysql.Error as e:
             print("GetUserRepoList Error %d: %s" % (e.args[0], e.args[1]))
 
+    # Returns a list of users that can access a repo
     def GetAllUsersWithAccessToRepo(self,repo,username_exclude):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
@@ -182,7 +197,7 @@ class Database:
         except pymysql.Error as e:
             print("GetAllUsersWithAccessToRepo Error %d: %s" % (e.args[0], e.args[1]))
 
-
+    # Returns the value of the specific setting of the user
     def GetSettingValueFromUserAndRepo(self,username,setting,repo):
         try:
             conn = pymysql.Connection(host = self.HOST, port = self.PORT, user = self.USERNAME, passwd = self.PASSWORD, db="eris")
